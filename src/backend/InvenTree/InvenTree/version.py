@@ -106,7 +106,7 @@ def inventreeInstanceTitle() -> str:
     if get_global_setting('INVENTREE_INSTANCE_TITLE'):
         return get_global_setting('INVENTREE_INSTANCE')
 
-    return 'InvenTree'
+    return 'TPI Inventory'
 
 
 def inventreeVersion() -> str:

@@ -36,11 +36,12 @@ from plugin.registry import registry
 
 try:
     from weasyprint import HTML
-except OSError as err:  # pragma: no cover
+except (OSError, ImportError) as err:  # pragma: no cover
     print(f'OSError: {err}')
     print("Unable to import 'weasyprint' module.")
     print('You may require some further system packages to be installed.')
-    sys.exit(1)
+    HTML = None  # type: ignore
+    print('Continuing without WeasyPrint — PDF report generation will not be available.')
 
 
 logger = structlog.getLogger('inventree')
@@ -277,6 +278,10 @@ class ReportTemplateBase(
             bytes: PDF data
         """
         html = self.render_as_string(instance, context=context, **kwargs)
+        if HTML is None:
+            raise RuntimeError(
+                'WeasyPrint is not available. Install system dependencies or skip PDF generation.'
+            )
         pdf = HTML(string=html).write_pdf(pdf_forms=True)
 
         return pdf

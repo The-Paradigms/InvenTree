@@ -219,7 +219,7 @@ SYSTEM_SETTINGS: dict[str, InvenTreeSettingsKeyType] = {
     },
     'INVENTREE_INSTANCE': {
         'name': _('Server Instance Name'),
-        'default': 'InvenTree',
+        'default': 'TPI Inventory',
         'description': _('String descriptor for the server instance'),
         'after_save': update_instance_name,
     },

@@ -286,7 +286,8 @@ def envcheck_python_version():
 def envcheck_invoke_cmd():
     """Checks if the rights invoke command for the current environment is used."""
     first_cmd = sys.argv[0].replace(sys.prefix, '')
-    intendded = ['/bin/invoke', '/bin/inv']
+    first_cmd = first_cmd.replace('\\', '/')
+    intendded = ['/bin/invoke', '/bin/inv', 'scripts/invoke', 'scripts/invoke.exe']
 
     correct_cmd: Optional[str] = None
     if is_rtd_environment() or is_docker_environment() or is_devcontainer_environment():
@@ -296,7 +297,7 @@ def envcheck_invoke_cmd():
     else:
         warning('Unknown environment, not checking used invoke command')
 
-    if first_cmd not in intendded:
+    if first_cmd.lower() not in [p.lower() for p in intendded]:
         correct_cmd = correct_cmd if correct_cmd else 'invoke'
         error('INVE-W9 - Wrong Invoke Environment')
         error(
@@ -310,6 +311,20 @@ def main():
     envcheck_python_version()
     envcheck_invoke_path()
     envcheck_invoke_cmd()
+
+
+def get_python_bin():
+    """Return the python binary name for the current platform."""
+    if sys.platform == 'win32':
+        return sys.executable
+    return 'python3'
+
+
+def get_pip_bin():
+    """Return the pip binary name for the current platform."""
+    if sys.platform == 'win32':
+        return f'{sys.executable} -m pip'
+    return 'pip3'
 
 
 # endregion
@@ -466,8 +481,15 @@ def run(
     env = env or {}
     path = path or local_dir()
 
+    # pty is not supported on Windows
+    if sys.platform == 'win32':
+        pty = False
+
     try:
-        result = c.run(f'cd "{path}" && {cmd}', pty=pty, env=env, hide=hide)
+        if sys.platform == 'win32':
+            result = c.run(f'cd /d "{path}" && {cmd}', pty=pty, env=env, hide=hide)
+        else:
+            result = c.run(f'cd "{path}" && {cmd}', pty=pty, env=env, hide=hide)
     except UnexpectedExit as e:
         error(f"ERROR: InvenTree command failed: '{cmd}'")
         warning('- Refer to the error messages in the log above for more information')
@@ -487,13 +509,13 @@ def manage(c, cmd, pty: bool = False, env=None, verbose: bool = False, **kwargs)
         verbose (bool, optional): Print verbose output from the command. Defaults to False.
     """
     if verbose:
-        info(f'Running command: python3 manage.py {cmd}')
+        info(f'Running command: {get_python_bin()} manage.py {cmd}')
         cmd += ' -v 1'
     else:
         cmd += ' -v 0'
 
     return run(
-        c, f'python3 manage.py {cmd}', manage_py_dir(), pty=pty, env=env, **kwargs
+        c, f'{get_python_bin()} manage.py {cmd}', manage_py_dir(), pty=pty, env=env, **kwargs
     )
 
 
@@ -547,24 +569,25 @@ def run_install(
         raise FileNotFoundError(f"Requirements file '{install_file}' not found")
 
     # Install required Python packages with PIP
+    pip_bin = get_pip_bin()
     if not uv:
         # Optionally run preflight first
         if run_preflight:
             run(
                 c,
-                f'pip3 install --no-cache-dir --disable-pip-version-check -U pip setuptools {"" if verbose else "--quiet"}',
+                f'{pip_bin} install --no-cache-dir --disable-pip-version-check -U pip setuptools {"" if verbose else "--quiet"}',
             )
             info('Installed package manager')
 
         run(
             c,
-            f'pip3 install --no-cache-dir --disable-pip-version-check -U {"--require-hashes" if pinned else ""} -r {install_file} {"" if verbose else "--quiet"}',
+            f'{pip_bin} install --no-cache-dir --disable-pip-version-check -U {"--require-hashes" if pinned else ""} -r {install_file} {"" if verbose else "--quiet"}',
         )
     else:
         if run_preflight:
             run(
                 c,
-                f'pip3 install --no-cache-dir --disable-pip-version-check -U uv setuptools {"" if verbose else "--quiet"}',
+                f'{pip_bin} install --no-cache-dir --disable-pip-version-check -U uv setuptools {"" if verbose else "--quiet"}',
             )
             info('Installed package manager')
         run(
@@ -592,10 +615,14 @@ def node_available(versions: bool = False, bypass_yarn: bool = False):
             return val, val0, val1
         return val
 
-    def check(cmd):
+    def check(cmd_parts):
+        try:
+            parts = cmd_parts.split()
+        except Exception:
+            parts = cmd_parts if isinstance(cmd_parts, list) else [cmd_parts]
         try:
             return str(
-                subprocess.check_output([cmd], stderr=subprocess.STDOUT, shell=True),
+                subprocess.check_output(parts, stderr=subprocess.STDOUT, shell=True),
                 encoding='utf-8',
             ).strip()
         except subprocess.CalledProcessError:
@@ -1749,7 +1776,7 @@ def setup_test(
 
     # Remove old data directory
     if template_dir.exists():
-        run(c, f'rm {template_dir} -r')
+        shutil.rmtree(str(template_dir))
 
     URL = 'https://github.com/inventree/demo-dataset'
 
@@ -2345,16 +2372,14 @@ def build_docs(c, mkdocs=False):
 @task
 def clear_generated(c):
     """Clear generated files from `invoke update`."""
-    # pyc/pyo files
-    run(c, 'find src -name "*.pyc" -exec rm -f {} +')
-    run(c, 'find src -name "*.pyo" -exec rm -f {} +')
+    src_dir = local_dir() / 'src'
+    for pattern in ['*.pyc', '*.pyo', 'django.mo', 'messages.mo']:
+        for f in src_dir.rglob(pattern):
+            f.unlink(missing_ok=True)
 
     # cache folders
-    run(c, 'find src -name "__pycache__" -exec rm -rf {} +')
-
-    # Generated translations
-    run(c, 'find src -name "django.mo" -exec rm -f {} +')
-    run(c, 'find src -name "messages.mo" -exec rm -f {} +')
+    for d in src_dir.rglob('__pycache__'):
+        shutil.rmtree(str(d), ignore_errors=True)
 
 
 @task(pre=[wait])

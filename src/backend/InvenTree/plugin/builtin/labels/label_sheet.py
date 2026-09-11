@@ -7,7 +7,10 @@ from django.core.files.base import ContentFile
 from django.utils.translation import gettext_lazy as _
 
 import structlog
-import weasyprint
+try:
+    import weasyprint  # type: ignore
+except (ImportError, OSError):  # pragma: no cover
+    weasyprint = None  # type: ignore
 from rest_framework import serializers
 
 import report.helpers
@@ -168,6 +171,8 @@ class InvenTreeLabelSheetPlugin(LabelPrintingMixin, SettingsMixin, InvenTreePlug
             generated_file = ContentFile(html_data, 'labels.html')
         else:
             # Render HTML to PDF
+            if weasyprint is None:  # type: ignore
+                raise RuntimeError('WeasyPrint is not available — PDF label generation is disabled.')
             html = weasyprint.HTML(string=html_data)
             document = html.render().write_pdf()
             generated_file = ContentFile(document, 'labels.pdf')
