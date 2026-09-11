@@ -47,9 +47,7 @@ User.add_to_class('__str__', user_model_str)  # Overriding User.__str__
 
 
 if settings.LDAP_AUTH:
-    from django_auth_ldap.backend import (  # type: ignore[unresolved-import]
-        populate_user,
-    )
+    from django_auth_ldap.backend import populate_user  # ty: ignore[unresolved-import]
 
     @receiver(populate_user)
     def create_email_address(user, **kwargs):
@@ -498,6 +496,15 @@ class UserProfile(InvenTree.models.MetadataMixin):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name='profile', verbose_name=_('User')
     )
+
+    def check_permission(self, permission, user):
+        """Check if the user has the required permission for this profile.
+
+        UserProfile has no RuleSet permissions of its own,
+        so we manually check if the user is the owner of this profile.
+        """
+        return self.user_id == user.pk
+
     language = models.CharField(
         max_length=10,
         blank=True,

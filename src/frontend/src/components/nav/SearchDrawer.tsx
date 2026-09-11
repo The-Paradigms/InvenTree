@@ -47,10 +47,16 @@ import {
 } from '@lib/functions/Navigation';
 import { showNotification } from '@mantine/notifications';
 import { api } from '../../App';
+import { openGlobalPreview } from '../../states/PreviewDrawerState';
 import { useUserSettingsState } from '../../states/SettingsStates';
 import { useUserState } from '../../states/UserState';
 import { RenderInstance } from '../render/Instance';
 import { getModelInfo } from '../render/ModelType';
+
+// Minimum number of characters required before firing a (non-regex) search query.
+// Very short terms match broadly against every searched field across every model,
+// which is expensive to compute and rarely useful to the user.
+const MIN_SEARCH_LENGTH = 2;
 
 // Define type for handling individual search queries
 type SearchQuery = {
@@ -390,9 +396,13 @@ export function SearchDrawer({
   }, [searchText]);
 
   // Function for performing the actual search query
-  const performSearch = async () => {
-    // Return empty result set if no search text
-    if (!searchText) {
+  const performSearch = async ({ signal }: { signal: AbortSignal }) => {
+    // Return empty result set if no search text, or too short to be worth searching on
+    // (a very short term matches broadly against every searched field, and is rarely useful)
+    if (
+      !searchText ||
+      (!searchRegex && searchText.length < MIN_SEARCH_LENGTH)
+    ) {
       return [];
     }
 
@@ -412,7 +422,7 @@ export function SearchDrawer({
     });
 
     return api
-      .post(apiUrl(ApiEndpoints.api_search), params)
+      .post(apiUrl(ApiEndpoints.api_search), params, { signal })
       .then((response) => response.data);
   };
 
@@ -465,6 +475,17 @@ export function SearchDrawer({
   function onResultClick(query: ModelType, pk: number, event: any) {
     const targetModel = ModelInformationDict[query];
     if (targetModel.url_detail == undefined) {
+      return;
+    }
+
+    const showPreviewPanel =
+      userSettings.isSet('ENABLE_PREVIEW_PANEL') &&
+      userSettings.isSet('SEARCH_RESULTS_PREVIEW_PANEL');
+
+    if (showPreviewPanel && !eventModified(event)) {
+      // Open the result in the preview panel, keeping the search drawer open
+      cancelEvent(event);
+      openGlobalPreview(query, pk);
       return;
     }
 
@@ -564,9 +585,9 @@ export function SearchDrawer({
               multiple
               defaultValue={searchQueries.map((q) => q.model)}
             >
-              {queryResults.map((query, idx) => (
+              {queryResults.map((query) => (
                 <QueryResultGroup
-                  key={idx}
+                  key={query.model}
                   searchText={searchText}
                   query={query}
                   navigate={navigate}

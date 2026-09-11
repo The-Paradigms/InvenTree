@@ -10,7 +10,7 @@ import common.validators
 class ParameterTemplateAdmin(admin.ModelAdmin):
     """Admin interface for ParameterTemplate objects."""
 
-    list_display = ('name', 'description', 'model_type', 'units')
+    list_display = ('name', 'description', 'model_type', 'units', 'unique')
     search_fields = ('name', 'description')
 
 
@@ -50,6 +50,15 @@ class SelectionListAdmin(admin.ModelAdmin):
     inlines = [SelectionListEntryInlineAdmin]
 
 
+@admin.register(common.models.Note)
+class NoteAdmin(admin.ModelAdmin):
+    """Admin interface for Note objects."""
+
+    list_display = ('title', 'template', 'model_type', 'model_id', 'primary')
+    list_filter = ('template', 'model_type')
+    search_fields = ('title', 'description', 'content')
+
+
 @admin.register(common.models.Attachment)
 class AttachmentAdmin(admin.ModelAdmin):
     """Admin interface for Attachment objects."""
@@ -74,7 +83,9 @@ class AttachmentAdmin(admin.ModelAdmin):
 
     readonly_fields = ['file_size', 'upload_date', 'upload_user']
 
-    search_fields = ('content_type', 'comment')
+    search_fields = ('comment', 'link', 'upload_user__username')
+
+    autocomplete_fields = ('upload_user',)
 
 
 @admin.register(common.models.DataOutput)
@@ -84,6 +95,16 @@ class DataOutputAdmin(admin.ModelAdmin):
     list_display = ('user', 'created', 'output_type', 'output')
 
     list_filter = ('user', 'output_type')
+
+    search_fields = (
+        'output_type',
+        'output',
+        'user__username',
+        'user__first_name',
+        'user__last_name',
+    )
+
+    autocomplete_fields = ('user',)
 
     def has_add_permission(self, request):
         """Prevent addition of new DataOutput objects via the admin interface."""
@@ -102,6 +123,10 @@ class BarcodeScanResultAdmin(admin.ModelAdmin):
 
     list_filter = ('user', 'endpoint', 'result')
 
+    search_fields = ('data', 'endpoint', 'result', 'user__username')
+
+    autocomplete_fields = ('user',)
+
     def has_add_permission(self, request):
         """Prevent addition of new BarcodeScanResult objects via the admin interface."""
         return False
@@ -115,7 +140,8 @@ class BarcodeScanResultAdmin(admin.ModelAdmin):
 class ProjectCodeAdmin(admin.ModelAdmin):
     """Admin settings for ProjectCode."""
 
-    list_display = ('code', 'description')
+    list_display = ('code', 'description', 'active')
+    list_filter = ('active',)
 
     search_fields = ('code', 'description')
 
@@ -125,6 +151,8 @@ class SettingsAdmin(admin.ModelAdmin):
     """Admin settings for InvenTreeSetting."""
 
     list_display = ('key', 'value')
+
+    search_fields = ('key', 'value')
 
     def get_readonly_fields(self, request, obj=None):  # pragma: no cover
         """Prevent the 'key' field being edited once the setting is created."""
@@ -139,6 +167,16 @@ class UserSettingsAdmin(admin.ModelAdmin):
 
     list_display = ('key', 'value', 'user')
 
+    search_fields = (
+        'key',
+        'value',
+        'user__username',
+        'user__first_name',
+        'user__last_name',
+    )
+
+    autocomplete_fields = ('user',)
+
     def get_readonly_fields(self, request, obj=None):  # pragma: no cover
         """Prevent the 'key' field being edited once the setting is created."""
         if obj:
@@ -152,12 +190,18 @@ class WebhookAdmin(admin.ModelAdmin):
 
     list_display = ('endpoint_id', 'name', 'active', 'user')
 
+    search_fields = ('endpoint_id', 'name', 'user__username')
+
+    autocomplete_fields = ('user',)
+
 
 @admin.register(common.models.NotificationEntry)
 class NotificationEntryAdmin(admin.ModelAdmin):
     """Admin settings for NotificationEntry - view and delete only."""
 
     list_display = ('key', 'uid', 'updated')
+
+    search_fields = ('key', 'uid')
 
     def has_add_permission(self, request):
         """Prevent addition of new NotificationEntry objects via the admin interface."""
@@ -184,7 +228,9 @@ class NotificationMessageAdmin(admin.ModelAdmin):
 
     list_filter = ('category', 'read', 'user')
 
-    search_fields = ('name', 'category', 'message')
+    search_fields = ('name', 'category', 'message', 'user__username')
+
+    autocomplete_fields = ('user',)
 
     def has_add_permission(self, request):
         """Prevent addition of new NotificationMessage objects via the admin interface."""
@@ -200,6 +246,8 @@ class NewsFeedEntryAdmin(admin.ModelAdmin):
     """Admin settings for NewsFeedEntry - view and delete only."""
 
     list_display = ('title', 'author', 'published', 'summary')
+
+    search_fields = ('title', 'author', 'summary')
 
     def has_add_permission(self, request):
         """Prevent addition of new NewsFeedEntry objects via the admin interface."""

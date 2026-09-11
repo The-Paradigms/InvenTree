@@ -25,6 +25,7 @@ from pypdf import PdfWriter
 import InvenTree.exceptions
 import InvenTree.helpers
 import InvenTree.models
+import InvenTree.ready
 import report.helpers
 import report.validators
 from common.models import DataOutput, RenderChoices, UpdatedUserMixin
@@ -36,6 +37,7 @@ from plugin.registry import registry
 
 try:
     from weasyprint import HTML
+    from report.fetcher import InvenTreeURLFetcher
 except (OSError, ImportError) as err:  # pragma: no cover
     print(f'OSError: {err}')
     print("Unable to import 'weasyprint' module.")
@@ -282,7 +284,9 @@ class ReportTemplateBase(
             raise RuntimeError(
                 'WeasyPrint is not available. Install system dependencies or skip PDF generation.'
             )
-        pdf = HTML(string=html).write_pdf(pdf_forms=True)
+        pdf = HTML(string=html, url_fetcher=InvenTreeURLFetcher()).write_pdf(
+            pdf_forms=True
+        )
 
         return pdf
 
@@ -579,10 +583,10 @@ class ReportTemplate(TemplateUploadMixin, ReportTemplateBase):
                     raise ValidationError(msg)
                 except TemplateSyntaxError as e:
                     msg = _('Template syntax error')
-                    output.mark_failure(msg)
+                    output.mark_failure(str(e) or msg)
                     raise ValidationError(f'{msg}: {e!s}')
                 except ValidationError as e:
-                    output.mark_failure(str(e))
+                    output.mark_failure(','.join(e.messages))
                     raise e
                 except Exception as e:
                     msg = _('Error rendering report')
@@ -618,10 +622,10 @@ class ReportTemplate(TemplateUploadMixin, ReportTemplateBase):
                         raise ValidationError(msg)
                     except TemplateSyntaxError as e:
                         msg = _('Template syntax error')
-                        output.mark_failure(error=_('Template syntax error'))
+                        output.mark_failure(error=str(e) or msg)
                         raise ValidationError(f'{msg}: {e!s}')
                     except ValidationError as e:
-                        output.mark_failure(str(e))
+                        output.mark_failure(', '.join(e.messages))
                         raise e
                     except Exception as e:
                         msg = _('Error rendering report')
@@ -644,6 +648,13 @@ class ReportTemplate(TemplateUploadMixin, ReportTemplateBase):
             # Something went wrong during the report generation process
             log_report_error('ReportTemplate.print')
 
+            # If the error occurred in a worker thread, we do not want to raise an error,
+            # as this would cause the worker to retry the task indefinitely
+            if InvenTree.ready.isInWorkerThread():
+                return
+
+            # Raise a ValidationError with the error message
+            # This will be caught by the caller and displayed to the user
             raise ValidationError({
                 'error': _('Error generating report'),
                 'detail': str(exc),
@@ -678,6 +689,12 @@ class ReportTemplate(TemplateUploadMixin, ReportTemplateBase):
                 log_report_error('ReportTemplate.print')
                 msg = _('Error merging report outputs')
                 output.mark_failure(error=msg)
+
+                # If the error occurred in a worker thread, we do not want to raise an error,
+                # as this would cause the worker to retry the task indefinitely
+                if InvenTree.ready.isInWorkerThread():
+                    return
+
                 raise ValidationError(msg)
 
         # Save the generated report to the database
