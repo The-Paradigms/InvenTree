@@ -1,0 +1,21 @@
+# Docker Compose override to build custom image directly from local repository source
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+#
+# Or use the helper script:
+#   ./docker-host.sh build-start
+
+services:
+    inventree-server:
+        build:
+            context: .
+            dockerfile: contrib/container/Dockerfile
+            target: production
+        image: inventree-local:latest
+
+    inventree-worker:
+        image: inventree-local:latest
+        depends_on:
+            inventree-server:
+                condition: service_started
