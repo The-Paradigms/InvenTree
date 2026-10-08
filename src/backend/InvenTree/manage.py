@@ -7,6 +7,16 @@ import sys
 
 def main():
     """Run administrative tasks."""
+    try:
+        from pathlib import Path
+        from dotenv import load_dotenv
+
+        env_file = Path(__file__).resolve().parents[3] / '.env'
+        if env_file.exists():
+            load_dotenv(env_file)
+    except Exception:
+        pass
+
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'InvenTree.settings')
 
     try:

@@ -106,7 +106,7 @@ node_modules/
 maintenance_mode_state.txt
 
 # plugin dev directory
-src/backend/InvenTree/plugins/
+#src/backend/InvenTree/plugins/
 
 # Compiled translation files
 *.mo
