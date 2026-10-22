@@ -53,8 +53,11 @@ class CompanyBriefSerializer(InvenTreeModelSerializer):
             'thumbnail',
             'currency',
             'tax_id',
+            'is_taxable',
         ]
         read_only_fields = ['currency']
+
+    is_taxable = serializers.BooleanField(required=False, default=True)
 
     image = InvenTreeImageSerializerField(read_only=True)
 
@@ -146,9 +149,17 @@ class CompanySerializer(
             'parts_manufactured',
             'primary_address',
             'tax_id',
+            'is_taxable',
             'parameters',
             'tags',
         ]
+
+    is_taxable = serializers.BooleanField(
+        required=False,
+        default=True,
+        label=_('Taxable'),
+        help_text=_('Is this company subject to sales tax?'),
+    )
 
     @staticmethod
     def annotate_queryset(queryset):

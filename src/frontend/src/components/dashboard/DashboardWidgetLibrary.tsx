@@ -10,6 +10,7 @@ import LanguageSelectDashboardWidget from './widgets/LanguageSelectWidget';
 import NewsWidget from './widgets/NewsWidget';
 import QueryCountDashboardWidget from './widgets/QueryCountDashboardWidget';
 import QueryDashboardWidget from './widgets/QueryDashboardWidget';
+import StatsDashboardWidget from './widgets/StatsDashboardWidget';
 import StocktakeDashboardWidget from './widgets/StocktakeDashboardWidget';
 
 /**
@@ -249,11 +250,19 @@ function BuiltinActionWidgets(): DashboardWidgetProps[] {
 }
 
 /**
+ * Built-in overview dashboard widgets (stats, charts, logs)
+ */
+export function BuiltinOverviewWidgets(): DashboardWidgetProps[] {
+  return [StatsDashboardWidget()];
+}
+
+/**
  *
  * @returns A list of built-in dashboard widgets
  */
 export default function DashboardWidgetLibrary(): DashboardWidgetProps[] {
   return [
+    ...BuiltinOverviewWidgets(),
     ...BuiltinQueryCountWidgets(),
     ...BuiltinGettingStartedWidgets(),
     ...BuiltinSettingsWidgets(),

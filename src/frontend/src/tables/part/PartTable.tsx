@@ -26,10 +26,11 @@ import {
   LinkColumn,
   PartColumn
 } from '../../components/tables/ColumnRenderers';
+import { Badge } from '@mantine/core';
 import { InvenTreeTable } from '../../components/tables/InvenTreeTable';
 import { renderPartStockCell } from '../../components/tables/PartStockCell';
 import OrderPartsWizard from '../../components/wizards/OrderPartsWizard';
-import { formatPriceRange } from '../../defaults/formatters';
+import { formatCurrency, formatPriceRange } from '../../defaults/formatters';
 import { DuplicateField } from '../../forms/CommonFields';
 import { usePartFields } from '../../forms/PartForms';
 import { InvenTreeIcon } from '../../functions/icons';
@@ -83,6 +84,192 @@ function partTableColumns(): TableColumn[] {
       title: t`On Order`,
       filter: 'on_order',
       sortable: true,
+      defaultVisible: false
+    }),
+    {
+      accessor: 'cost',
+      title: t`Cost`,
+      sortable: true,
+      ordering: 'pricing_min',
+      defaultVisible: true,
+      render: (record: any) => {
+        const cost =
+          record.cost ??
+          record.metadata?.cost ??
+          record.pricing_min ??
+          null;
+        const currency =
+          record.cost_currency ??
+          record.metadata?.cost_currency ??
+          record.pricing_data?.currency;
+        return cost != null && cost !== ''
+          ? formatCurrency(cost, { currency })
+          : '-';
+      }
+    },
+    {
+      accessor: 'desired_margin',
+      title: t`Margin`,
+      sortable: true,
+      defaultVisible: true,
+      render: (record: any) => {
+        let margin =
+          record.desired_margin ??
+          record.metadata?.desired_margin ??
+          null;
+
+        const cost = Number(
+          record.cost ??
+            record.metadata?.cost ??
+            record.pricing_min ??
+            0
+        );
+
+        let price =
+          record.selling_price ??
+          record.metadata?.selling_price ??
+          null;
+
+        if (
+          (price == null || price === 0) &&
+          cost > 0 &&
+          margin != null &&
+          Number(margin) < 100
+        ) {
+          price = cost / (1 - Number(margin) / 100);
+        }
+
+        if (margin == null && cost > 0 && price != null && Number(price) > 0) {
+          margin = ((Number(price) - cost) / Number(price)) * 100;
+        }
+
+        if (margin == null || isNaN(Number(margin))) {
+          return '-';
+        }
+
+        const marginVal = Number(margin);
+        const color =
+          marginVal >= 30
+            ? 'teal'
+            : marginVal >= 15
+            ? 'blue'
+            : marginVal > 0
+            ? 'yellow'
+            : 'red';
+
+        return (
+          <Badge color={color} variant='light' size='sm'>
+            {marginVal.toFixed(1)}%
+          </Badge>
+        );
+      }
+    },
+    {
+      accessor: 'selling_price',
+      title: t`Selling Price`,
+      sortable: true,
+      ordering: 'pricing_max',
+      defaultVisible: true,
+      render: (record: any) => {
+        const cost = Number(
+          record.cost ??
+            record.metadata?.cost ??
+            record.pricing_min ??
+            0
+        );
+        const margin =
+          record.desired_margin ??
+          record.metadata?.desired_margin ??
+          null;
+
+        let price =
+          record.selling_price ??
+          record.metadata?.selling_price ??
+          null;
+
+        if (
+          (price == null || price === 0) &&
+          cost > 0 &&
+          margin != null &&
+          Number(margin) < 100
+        ) {
+          price = cost / (1 - Number(margin) / 100);
+        }
+
+        const currency =
+          record.selling_price_currency ??
+          record.metadata?.selling_price_currency ??
+          record.pricing_data?.currency;
+
+        return price != null && Number(price) > 0
+          ? formatCurrency(price, { currency })
+          : '-';
+      }
+    },
+    {
+      accessor: 'minimum_price',
+      title: t`Minimum Price`,
+      sortable: true,
+      defaultVisible: false,
+      render: (record: any) => {
+        const price = record.minimum_price ?? null;
+        const currency =
+          record.minimum_price_currency ??
+          record.pricing_data?.currency;
+        return price != null && Number(price) > 0
+          ? formatCurrency(price, { currency })
+          : '-';
+      }
+    },
+    {
+      accessor: 'new_cost',
+      title: t`New Cost`,
+      sortable: true,
+      defaultVisible: false,
+      render: (record: any) => {
+        const cost = record.new_cost ?? null;
+        const currency = record.new_cost_currency ?? record.pricing_data?.currency;
+        return cost != null && cost !== ''
+          ? formatCurrency(cost, { currency })
+          : '-';
+      }
+    },
+    {
+      accessor: 'customer_part_number',
+      title: t`Customer Part Number`,
+      sortable: true,
+      switchable: true,
+      defaultVisible: false
+    },
+    {
+      accessor: 'weight',
+      title: t`Weight`,
+      sortable: true,
+      switchable: true,
+      defaultVisible: false,
+      render: (record: any) =>
+        record.weight ? `${record.weight} ${record.weight_unit || ''}`.trim() : '-'
+    },
+    {
+      accessor: 'volume',
+      title: t`Volume`,
+      sortable: true,
+      switchable: true,
+      defaultVisible: false,
+      render: (record: any) =>
+        record.volume ? `${record.volume} ${record.volume_unit || ''}`.trim() : '-'
+    },
+    {
+      accessor: 'warranty',
+      title: t`Warranty`,
+      sortable: true,
+      switchable: true,
+      defaultVisible: false
+    },
+    BooleanColumn({
+      accessor: 'is_taxable',
+      title: t`Taxable`,
+      switchable: true,
       defaultVisible: false
     }),
     {
@@ -205,7 +392,8 @@ export function PartListTable({
     },
     follow: false,
     modelType: ModelType.part,
-    onFormSuccess: table.refreshTable
+    onFormSuccess: table.refreshTable,
+    size: '95%'
   });
 
   const setCategory = useBulkEditApiFormModal({
