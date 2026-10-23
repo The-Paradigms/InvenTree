@@ -122,3 +122,9 @@ InvenTree/web/static
 # test results and logs
 _tests*.txt
 .codspeed/
+
+# SQLite database files
+db/*.sqlite3
+db/*.sqlite3-shm
+db/*.sqlite3-wal
+
