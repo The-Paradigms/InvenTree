@@ -76,26 +76,11 @@ export function Wrapper({
             </>
           )}
           {imageOverlay && (
-            <div className='auth-mobile-options-container'>
+            <div className='auth-controls-row'>
               {imageOverlay}
             </div>
           )}
         </Stack>
-      </div>
-
-      <div className='auth-image-column'>
-        <div className='auth-image-frame'>
-          <img
-            src='/login_bgimg.jpeg'
-            alt='Warehouse & Workshop Management'
-            className='auth-banner-image'
-          />
-          {imageOverlay && (
-            <div className='auth-image-controls-overlay'>
-              {imageOverlay}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
