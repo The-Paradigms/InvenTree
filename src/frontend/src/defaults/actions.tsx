@@ -24,7 +24,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useLocalState } from '../states/LocalState';
 import { useGlobalSettingsState } from '../states/SettingsStates';
 import { useUserState } from '../states/UserState';
-import { aboutInvenTree, docLinks, licenseInfo, serverInfo } from './links';
+import { licenseInfo, serverInfo } from './links';
 
 function openQrModal(navigate: NavigateFunction) {
   return openContextModal({
@@ -64,22 +64,7 @@ export function getActions(navigate: NavigateFunction) {
         onClick: () => navigate('/'),
         leftSection: <IconLink size='1.2rem' />
       },
-      {
-        id: 'documentation',
-        label: t`Documentation`,
-        description: t`Visit the documentation to learn more about InvenTree`,
-        onClick: () => {
-          window.location.href = docLinks.faq;
-        },
-        leftSection: <IconLink size='1.2rem' />
-      },
-      {
-        id: 'about',
-        label: t`About InvenTree`,
-        description: t`About the InvenTree org`,
-        onClick: () => aboutInvenTree(),
-        leftSection: <IconLink size='1.2rem' />
-      },
+
       {
         id: 'server-info',
         label: t`Server Information`,

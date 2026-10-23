@@ -623,13 +623,7 @@ export function AppSidebar() {
                 active={isActive('stock')}
                 collapsed={isCollapsed}
               />
-              <SidebarItem
-                icon={<IconBuildingBank size={16} style={{ color: '#2ca01c' }} />}
-                label={t`QuickBooks`}
-                link='/quickbooks'
-                active={isActive('quickbooks')}
-                collapsed={isCollapsed}
-              />
+
             </SidebarGroup>
 
             {/* INVENTORY */}
@@ -815,26 +809,7 @@ export function AppSidebar() {
               </UnstyledButton>
             </Tooltip>
 
-            {/* Help Button in collapsed mode */}
-            <Tooltip label={t`Help`} position='right' offset={14} withArrow>
-              <UnstyledButton
-                onClick={() => aboutInvenTree()}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: SIDEBAR_ITEM_DEFAULT,
-                  cursor: 'pointer',
-                  transition: 'all 0.18s ease'
-                }}
-                className='sidebar-nav-item'
-              >
-                <IconHelpCircle size={18} style={{ color: '#38bdf8' }} />
-              </UnstyledButton>
-            </Tooltip>
+
           </Box>
         ) : (
           <Box
@@ -908,12 +883,7 @@ export function AppSidebar() {
             {/* Dark Mode toggle item */}
             <DarkModeToggleItem isDark={isDark} onToggle={toggleColorScheme} />
 
-            {/* Help item */}
-            <SidebarItem
-              icon={<IconHelpCircle size={16} />}
-              label={t`Help`}
-              action={() => aboutInvenTree()}
-            />
+
           </Box>
         )}
       </Box>

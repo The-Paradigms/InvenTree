@@ -19,8 +19,6 @@ import {
   IconBell,
   IconChevronDown,
   IconExclamationCircle,
-  IconHelpCircle,
-  IconInfoCircle,
   IconLogout,
   IconMoonStars,
   IconQrcode,
@@ -39,7 +37,6 @@ import { ApiEndpoints } from '@lib/enums/ApiEndpoints';
 import { apiUrl } from '@lib/functions/Api';
 import { useInvenTreeHotkeys } from '@lib/functions/Events';
 import { api } from '../../App';
-import { aboutInvenTree } from '../../defaults/links';
 import { doLogout } from '../../functions/auth';
 import { useServerApiState } from '../../states/ServerApiState';
 import {
@@ -192,8 +189,7 @@ export function TopBar() {
             </Tooltip>
           </Indicator>
 
-          {/* Alerts */}
-          <Alerts />
+          {/* Alerts - hidden */}
 
           <Divider orientation='vertical' mx={4} />
 
@@ -275,16 +271,6 @@ export function TopBar() {
                   <Trans>Admin Center</Trans>
                 </Menu.Item>
               )}
-
-              <Menu.Divider />
-
-
-              <Menu.Item
-                onClick={() => aboutInvenTree()}
-                leftSection={<IconHelpCircle size={14} />}
-              >
-                <Trans>About InvenTree</Trans>
-              </Menu.Item>
 
               <Menu.Divider />
 
