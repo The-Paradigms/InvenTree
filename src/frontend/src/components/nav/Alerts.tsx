@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react';
 import type { SettingsStateProps } from '@lib/types/Settings';
 import { t } from '@lingui/core/macro';
 import { useShallow } from 'zustand/react/shallow';
-import { docLinks } from '../../defaults/links';
 import { useServerApiState } from '../../states/ServerApiState';
 import { useGlobalSettingsState } from '../../states/SettingsStates';
 import { useUserState } from '../../states/UserState';
@@ -162,14 +161,6 @@ export function getAlerts(
   return allAlerts.filter((alert) => inactive || alert.condition);
 }
 
-export function errorCodeLink(code: string) {
-  return (
-    <a
-      href={`${docLinks.errorcodes}#${code.toLowerCase()}`}
-      target='_blank'
-      rel='noreferrer'
-    >
-      {t`Learn more about ${code}`}
-    </a>
-  );
+export function errorCodeLink(_code: string) {
+  return null;
 }

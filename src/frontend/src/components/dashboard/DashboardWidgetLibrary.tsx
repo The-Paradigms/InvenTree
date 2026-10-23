@@ -5,9 +5,7 @@ import { useGlobalSettingsState } from '../../states/SettingsStates';
 import { useUserState } from '../../states/UserState';
 import type { DashboardWidgetProps } from './DashboardWidget';
 import ColorToggleDashboardWidget from './widgets/ColorToggleWidget';
-import GetStartedWidget from './widgets/GetStartedWidget';
 import LanguageSelectDashboardWidget from './widgets/LanguageSelectWidget';
-import NewsWidget from './widgets/NewsWidget';
 import QueryCountDashboardWidget from './widgets/QueryCountDashboardWidget';
 import QueryDashboardWidget from './widgets/QueryDashboardWidget';
 import StatsDashboardWidget from './widgets/StatsDashboardWidget';
@@ -218,29 +216,6 @@ function BuiltinQueryCountWidgets(): DashboardWidgetProps[] {
   });
 }
 
-function BuiltinGettingStartedWidgets(): DashboardWidgetProps[] {
-  return [
-    {
-      label: 'gstart',
-      title: t`Getting Started`,
-      description: t`Getting started with InvenTree`,
-      minWidth: 5,
-      minHeight: 4,
-      icon: 'info',
-      render: () => <GetStartedWidget />
-    },
-    {
-      label: 'news',
-      title: t`News Updates`,
-      description: t`The latest news from InvenTree`,
-      minWidth: 5,
-      minHeight: 4,
-      icon: 'news',
-      render: () => <NewsWidget />
-    }
-  ];
-}
-
 function BuiltinSettingsWidgets(): DashboardWidgetProps[] {
   return [ColorToggleDashboardWidget(), LanguageSelectDashboardWidget()];
 }
@@ -264,7 +239,6 @@ export default function DashboardWidgetLibrary(): DashboardWidgetProps[] {
   return [
     ...BuiltinOverviewWidgets(),
     ...BuiltinQueryCountWidgets(),
-    ...BuiltinGettingStartedWidgets(),
     ...BuiltinSettingsWidgets(),
     ...BuiltinActionWidgets()
   ];

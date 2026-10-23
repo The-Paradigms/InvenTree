@@ -40,7 +40,9 @@ const REMOVED_WIDGET_LABELS = new Set([
   'dash-profit-cat',
   'dash-order-summary',
   'dash-stock-level',
-  'dash-restock'
+  'dash-restock',
+  'gstart',
+  'news'
 ]);
 
 function getDefaultWidgetWidth(
@@ -415,20 +417,6 @@ export default function DashboardLayout() {
       { w: 12, h: 2, x: 0, y: 0, i: 'dash-stats', minW: 6, minH: 2, moved: false, static: false }
     ];
 
-    if (user.isSuperuser()) {
-      lgLayouts.push({
-        w: 12,
-        h: 4,
-        x: 0,
-        y: 2,
-        i: 'news',
-        minW: 4,
-        minH: 3,
-        moved: false,
-        static: false
-      });
-    }
-
     const mdLayouts: Layout[] = [
       { w: 10, h: 2, x: 0, y: 0, i: 'dash-stats', minW: 5, minH: 2, moved: false, static: false }
     ];
@@ -447,9 +435,7 @@ export default function DashboardLayout() {
   }, [user]);
 
   const defaultWidgets = useMemo(() => {
-    const targetLabels = user.isSuperuser()
-      ? [...overviewWidgetLabels, 'news']
-      : overviewWidgetLabels;
+    const targetLabels = overviewWidgetLabels;
     return targetLabels
       .map((lwid: string) =>
         availableWidgets.items.find((wid) => wid.label === lwid)

@@ -10,7 +10,6 @@ import {
 } from '@tabler/icons-react';
 
 import { ApiEndpoints } from '@lib/index';
-import { docLinks } from '../../defaults/links';
 import {
   projectCodeFields,
   useCustomStateFields
@@ -26,6 +25,7 @@ interface ActionItem {
   icon?: ReactNode;
   buttonText?: string;
   action: () => void;
+  disabled?: boolean;
 }
 
 function ActionGrid({ items }: { items: ActionItem[] }) {
@@ -42,7 +42,8 @@ function ActionGrid({ items }: { items: ActionItem[] }) {
         <Button
           size='sm'
           variant='light'
-          onClick={image.action}
+          onClick={image.disabled ? undefined : image.action}
+          disabled={image.disabled}
           leftSection={image.icon}
         >
           {image.buttonText ?? <Trans>Act</Trans>}
@@ -87,7 +88,8 @@ export const QuickAction = () => {
       description: t`Report a bug or request a feature on GitHub`,
       icon: <IconBrandGithub />,
       buttonText: t`Open Issue`,
-      action: () => window.open(`${docLinks.bug}/new`, '_blank')
+      action: () => {},
+      disabled: true
     },
     {
       id: '1',
