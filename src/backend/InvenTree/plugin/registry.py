@@ -567,7 +567,7 @@ class PluginsRegistry:
 
             if custom_dirs is not None:
                 # Allow multiple plugin directories to be specified
-                for pd_text in custom_dirs.split(','):
+                for pd_text in str(custom_dirs).split(','):
                     pd = Path(pd_text.strip()).absolute()
 
                     # Attempt to create the directory if it does not already exist
