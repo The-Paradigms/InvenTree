@@ -12,6 +12,7 @@ export default function PrimaryActionButton({
   icon,
   color,
   hidden,
+  disabled,
   onClick,
   leftSection
 }: Readonly<{
@@ -20,24 +21,36 @@ export default function PrimaryActionButton({
   icon?: keyof InvenTreeIconType;
   color?: string;
   hidden?: boolean;
-  onClick: () => void;
+  disabled?: boolean;
+  onClick?: () => void;
   leftSection?: React.ReactNode;
 }>) {
   if (hidden) {
     return null;
   }
 
-  return (
-    <Tooltip label={tooltip ?? title} position='bottom' hidden={!tooltip}>
-      <Button
-        leftSection={leftSection ?? (icon && <InvenTreeIcon icon={icon} />)}
-        color={color}
-        radius='sm'
-        p='xs'
-        onClick={onClick}
-      >
-        {title}
-      </Button>
-    </Tooltip>
+  const button = (
+    <Button
+      leftSection={leftSection ?? (icon && <InvenTreeIcon icon={icon} />)}
+      color={color}
+      radius='sm'
+      p='xs'
+      disabled={disabled}
+      onClick={disabled ? undefined : onClick}
+    >
+      {title}
+    </Button>
   );
+
+  if (tooltip) {
+    return (
+      <Tooltip label={tooltip} position='bottom'>
+        <span style={{ display: 'inline-block', cursor: disabled ? 'not-allowed' : undefined }}>
+          {button}
+        </span>
+      </Tooltip>
+    );
+  }
+
+  return button;
 }

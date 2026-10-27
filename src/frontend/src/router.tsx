@@ -171,30 +171,30 @@ export const routes = (
       <Route path='home/' element={<Home />} />,
       <Route path='notifications/*' element={<Notifications />} />,
       <Route path='scan/' element={<Scan />} />,
-      <Route path='settings/'>
+      <Route path='settings'>
         <Route index element={<Navigate to='admin/' />} />
         <Route path='admin/*' element={<AdminCenter />} />
         <Route path='system/*' element={<SystemSettings />} />
         <Route path='user/*' element={<UserSettings />} />
       </Route>
-      <Route path='part/'>
+      <Route path='part'>
         <Route index element={<Navigate to='category/index/' />} />
         <Route path='category/:id?/*' element={<CategoryDetail />} />
         <Route path=':id/*' element={<PartDetail />} />
       </Route>
-      <Route path='stock/'>
+      <Route path='stock'>
         <Route index element={<Navigate to='location/index/' />} />
         <Route path='location/:id?/*' element={<LocationDetail />} />
         <Route path='item/:id/*' element={<StockDetail />} />
         <Route path='transfer-order/:id/*' element={<TransferOrderDetail />} />
       </Route>
-      <Route path='manufacturing/'>
+      <Route path='manufacturing'>
         <Route index element={<Navigate to='index/' />} />
         <Route path='index/*' element={<BuildIndex />} />
         <Route path='build-order/:id/*' element={<BuildDetail />} />
       </Route>
-      <Route path='purchasing/'>
-        <Route index element={<Navigate to='index/' />} />
+      <Route path='purchasing'>
+        <Route index element={<Navigate to='index/purchaseorders' />} />
         <Route path='index/*' element={<PurchasingIndex />} />
         <Route path='purchase-order/:id/*' element={<PurchaseOrderDetail />} />
         <Route path='supplier/:id/*' element={<SupplierDetail />} />
@@ -206,15 +206,15 @@ export const routes = (
         />
       </Route>
       <Route path='company/:id/*' element={<CompanyDetail />} />
-      <Route path='sales/'>
-        <Route index element={<Navigate to='index/' />} />
+      <Route path='sales'>
+        <Route index element={<Navigate to='index/salesorders' />} />
         <Route path='index/*' element={<SalesIndex />} />
         <Route path='sales-order/:id/*' element={<SalesOrderDetail />} />
         <Route path='shipment/:id/*' element={<SalesOrderShipmentDetail />} />
         <Route path='return-order/:id/*' element={<ReturnOrderDetail />} />
         <Route path='customer/:id/*' element={<CustomerDetail />} />
       </Route>
-      <Route path='core/'>
+      <Route path='core'>
         <Route index element={<Navigate to='index/' />} />
         <Route path='index/*' element={<CoreIndex />} />
         <Route path='user/:id/*' element={<UserDetail />} />

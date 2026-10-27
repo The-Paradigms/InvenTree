@@ -897,6 +897,8 @@ class SalesOrderTest(InvenTreeAPITestCase):
             responsible=Owner.create(obj=Group.objects.get(pk=3)),
         )
 
+        SalesOrderLineItem.objects.create(order=so, part=self.part, quantity=1)
+
         so.issue_order()
 
         messages = NotificationMessage.objects.filter(category='order.new_salesorder')
@@ -906,6 +908,20 @@ class SalesOrderTest(InvenTreeAPITestCase):
 
         # However *no* notification should have been generated for the creating user
         self.assertFalse(messages.filter(user__pk=3).exists())
+
+    def test_issue_order_without_line_items(self):
+        """Test that issuing an order with no line items raises a ValidationError."""
+        so = SalesOrder.objects.create(
+            customer=self.customer,
+            reference='SO-NO-LINES-TEST',
+        )
+        with self.assertRaises(ValidationError):
+            so.issue_order()
+
+        # Adding a line item should allow it to be issued
+        SalesOrderLineItem.objects.create(order=so, part=self.part, quantity=1)
+        so.issue_order()
+        self.assertEqual(so.status, SalesOrderStatus.IN_PROGRESS)
 
     def test_metadata(self):
         """Unit tests for the metadata field."""
