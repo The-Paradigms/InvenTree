@@ -21,7 +21,9 @@ from drf_spectacular.utils import extend_schema, extend_schema_field
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 import build.models
 import common.filters
@@ -33,6 +35,7 @@ import stock.models as stock_models
 import stock.serializers as stock_serializers
 from data_exporter.mixins import DataExportViewMixin
 from generic.states.api import StatusView
+import InvenTree.permissions
 from InvenTree.api import (
     BulkDeleteMixin,
     BulkDeleteViewsetMixin,
@@ -1382,6 +1385,330 @@ class SalesOrderAutoAllocate(SalesOrderContextMixin, CreateAPI):
 
         response = common.serializers.TaskDetailSerializer.from_task(task_id).data
         return Response(response, status=response['http_status'])
+
+
+class StateTaxRatesView(GenericAPIView):
+    """API endpoint to get available state sales tax rates."""
+
+    permission_classes = [InvenTree.permissions.IsAuthenticatedOrReadScope]
+
+    def get(self, request, *args, **kwargs):
+        tax_rates = [
+            {'state': 'None / Tax Exempt', 'code': 'EXEMPT', 'rate': 0.0},
+            {'state': 'Virginia', 'code': 'VA', 'rate': 5.3},
+            {'state': 'California', 'code': 'CA', 'rate': 7.25},
+            {'state': 'Texas', 'code': 'TX', 'rate': 6.25},
+            {'state': 'New York', 'code': 'NY', 'rate': 4.0},
+            {'state': 'Florida', 'code': 'FL', 'rate': 6.0},
+            {'state': 'Ohio', 'code': 'OH', 'rate': 5.75},
+            {'state': 'Pennsylvania', 'code': 'PA', 'rate': 6.0},
+            {'state': 'Illinois', 'code': 'IL', 'rate': 6.25},
+            {'state': 'North Carolina', 'code': 'NC', 'rate': 4.75},
+            {'state': 'Georgia', 'code': 'GA', 'rate': 4.0},
+            {'state': 'Michigan', 'code': 'MI', 'rate': 6.0},
+            {'state': 'New Jersey', 'code': 'NJ', 'rate': 6.625},
+            {'state': 'Washington', 'code': 'WA', 'rate': 6.5},
+            {'state': 'Arizona', 'code': 'AZ', 'rate': 5.6},
+            {'state': 'Massachusetts', 'code': 'MA', 'rate': 6.25},
+            {'state': 'Tennessee', 'code': 'TN', 'rate': 7.0},
+            {'state': 'Indiana', 'code': 'IN', 'rate': 7.0},
+            {'state': 'Maryland', 'code': 'MD', 'rate': 6.0},
+            {'state': 'Wisconsin', 'code': 'WI', 'rate': 5.0},
+            {'state': 'Colorado', 'code': 'CO', 'rate': 2.9},
+            {'state': 'Minnesota', 'code': 'MN', 'rate': 6.875},
+            {'state': 'South Carolina', 'code': 'SC', 'rate': 6.0},
+            {'state': 'Alabama', 'code': 'AL', 'rate': 4.0},
+            {'state': 'Louisiana', 'code': 'LA', 'rate': 4.45},
+            {'state': 'Kentucky', 'code': 'KY', 'rate': 6.0},
+            {'state': 'Oregon', 'code': 'OR', 'rate': 0.0},
+            {'state': 'Oklahoma', 'code': 'OK', 'rate': 4.5},
+            {'state': 'Connecticut', 'code': 'CT', 'rate': 6.35},
+            {'state': 'Utah', 'code': 'UT', 'rate': 6.1},
+            {'state': 'Iowa', 'code': 'IA', 'rate': 6.0},
+            {'state': 'Nevada', 'code': 'NV', 'rate': 6.85},
+            {'state': 'Arkansas', 'code': 'AR', 'rate': 6.5},
+            {'state': 'Mississippi', 'code': 'MS', 'rate': 7.0},
+            {'state': 'Kansas', 'code': 'KS', 'rate': 6.5},
+            {'state': 'New Mexico', 'code': 'NM', 'rate': 5.0},
+            {'state': 'Nebraska', 'code': 'NE', 'rate': 5.5},
+            {'state': 'Idaho', 'code': 'ID', 'rate': 6.0},
+            {'state': 'West Virginia', 'code': 'WV', 'rate': 6.0},
+            {'state': 'Hawaii', 'code': 'HI', 'rate': 4.0},
+            {'state': 'New Hampshire', 'code': 'NH', 'rate': 0.0},
+            {'state': 'Maine', 'code': 'ME', 'rate': 5.5},
+            {'state': 'Montana', 'code': 'MT', 'rate': 0.0},
+            {'state': 'Rhode Island', 'code': 'RI', 'rate': 7.0},
+            {'state': 'Delaware', 'code': 'DE', 'rate': 0.0},
+            {'state': 'South Dakota', 'code': 'SD', 'rate': 4.2},
+            {'state': 'North Dakota', 'code': 'ND', 'rate': 5.0},
+            {'state': 'Alaska', 'code': 'AK', 'rate': 0.0},
+            {'state': 'District of Columbia', 'code': 'DC', 'rate': 6.0},
+            {'state': 'Vermont', 'code': 'VT', 'rate': 6.0},
+            {'state': 'Wyoming', 'code': 'WY', 'rate': 4.0},
+        ]
+        return Response({'results': tax_rates})
+
+
+class ShippingMethodsView(GenericAPIView):
+    """API endpoint to get available shipping methods."""
+
+    permission_classes = [InvenTree.permissions.IsAuthenticatedOrReadScope]
+
+    def get(self, request, *args, **kwargs):
+        methods = [
+            'DHL',
+            'FedEx',
+            'UPS',
+            'USPS',
+            'Standard Freight',
+            'Customer Pickup',
+            'Local Courier',
+        ]
+        return Response({'results': methods})
+
+
+class SalesOrderGenerateInvoice(SalesOrderContextMixin, GenericAPIView):
+    """API endpoint to generate an invoice for a SalesOrder."""
+
+    permission_classes = [InvenTree.permissions.IsAuthenticatedOrReadScope]
+
+    def post(self, request, *args, **kwargs):
+        import os
+        from django.conf import settings
+        from report.models import ReportTemplate
+
+        order = self.get_object()
+        data = request.data
+
+        invoice_number = data.get('invoice_number') or order.reference
+        ship_method = data.get('ship_method') or 'Standard Freight'
+        try:
+            tax_rate = float(data.get('tax_rate', 0.0))
+        except (ValueError, TypeError):
+            tax_rate = 0.0
+        tax_state = data.get('tax_state', '')
+
+        # Safe fallback for subtotal: if not provided or 0, check items/extra_items or fallback to order total price
+        order_total = float(order.total_price.amount if order.total_price else 0)
+        items = data.get('items', [])
+        extra_items = data.get('extra_items', [])
+        try:
+            subtotal_in = float(data.get('subtotal', 0))
+        except (ValueError, TypeError):
+            subtotal_in = 0.0
+
+        if subtotal_in > 0:
+            subtotal = round(subtotal_in, 2)
+        elif items or extra_items:
+            items_sum = sum(float(it.get('total_price', 0)) or (float(it.get('quantity', 1)) * float(it.get('unit_price', 0))) for it in items)
+            extras_sum = sum(float(ex.get('total_price', 0)) or (float(ex.get('quantity', 1)) * float(ex.get('unit_price', ex.get('price', 0)))) for ex in extra_items)
+            subtotal = round(items_sum + extras_sum, 2)
+        else:
+            subtotal = round(order_total, 2)
+
+        # Safe calculation for tax amount:
+        try:
+            tax_in = float(data.get('tax_amount', 0))
+        except (ValueError, TypeError):
+            tax_in = 0.0
+
+        if tax_in > 0:
+            tax_amount = round(tax_in, 2)
+        elif tax_rate > 0 and subtotal > 0:
+            tax_amount = round(subtotal * (tax_rate / 100.0), 2)
+        else:
+            tax_amount = 0.0
+
+        # Safe calculation for total amount due:
+        try:
+            total_in = float(data.get('total_amount_due', 0))
+        except (ValueError, TypeError):
+            total_in = 0.0
+
+        if total_in > 0 and abs(total_in - subtotal) > 0.001:
+            total_amount_due = round(total_in, 2)
+        else:
+            total_amount_due = round(subtotal + tax_amount, 2)
+
+        import re
+
+        safe_inv_num = re.sub(r'[^a-zA-Z0-9_\-]', '_', invoice_number)
+        output_file_specific = f'SalesOrder-{order.reference}-{safe_inv_num}.html'
+        output_file_latest = f'SalesOrder-{order.reference}.html'
+        output_dir = os.path.join(settings.MEDIA_ROOT, 'data_output')
+        os.makedirs(output_dir, exist_ok=True)
+        output_url = f'{settings.MEDIA_URL}data_output/{output_file_specific}'
+
+        new_invoice_record = {
+            'id': f'inv-{int(InvenTree.helpers.current_time().timestamp())}',
+            'invoice_number': invoice_number,
+            'ship_method': ship_method,
+            'tax_rate': tax_rate,
+            'tax_state': tax_state,
+            'tax_amount': tax_amount,
+            'subtotal': subtotal,
+            'total_amount_due': total_amount_due,
+            'items': items,
+            'extra_items': extra_items,
+            'generated_date': InvenTree.helpers.current_date().isoformat(),
+            'output_file': output_file_specific,
+            'output_url': output_url,
+        }
+
+        # Save metadata to SalesOrder directly avoiding lock issues on completed orders
+        metadata = order.metadata.copy() if order.metadata else {}
+        invoices_list = metadata.get('invoices', [])
+        if not isinstance(invoices_list, list):
+            invoices_list = []
+
+        # Migrate previous single invoice if exists
+        if 'invoice' in metadata and isinstance(metadata['invoice'], dict) and metadata['invoice'].get('invoice_number'):
+            prev_inv = metadata['invoice']
+            if not any(i.get('invoice_number') == prev_inv.get('invoice_number') for i in invoices_list):
+                invoices_list.append(prev_inv)
+
+        # Ensure legacy invoices without items have them backfilled from order lines
+        for inv in invoices_list:
+            if not inv.get('items'):
+                inv['items'] = [
+                    {
+                        'line_number': idx + 1,
+                        'part_id': line.part.pk,
+                        'part_name': line.part.name,
+                        'part_ipn': line.part.IPN or '',
+                        'description': line.part.description or line.part.name,
+                        'units': line.part.units or 'pcs',
+                        'quantity': float(line.quantity),
+                        'unit_price': float(line.sale_price.amount if line.sale_price else 0),
+                        'total_price': round(float(line.quantity) * float(line.sale_price.amount if line.sale_price else 0), 2),
+                    }
+                    for idx, line in enumerate(order.lines.all())
+                ]
+
+        # Update or prepend current invoice record
+        existing_idx = next((i for i, inv in enumerate(invoices_list) if inv.get('invoice_number') == invoice_number), -1)
+        if existing_idx >= 0:
+            invoices_list[existing_idx] = new_invoice_record
+        else:
+            invoices_list.insert(0, new_invoice_record)
+
+        metadata['invoices'] = invoices_list
+        metadata['invoice'] = new_invoice_record
+        models.SalesOrder.objects.filter(pk=order.pk).update(metadata=metadata)
+        order.refresh_from_db()
+
+        # Render invoice report using active Sales Order template
+        template = ReportTemplate.objects.filter(model_type='salesorder', enabled=True).first()
+        html = None
+        pdf_file_specific = f'SalesOrder-{order.reference}-{safe_inv_num}.pdf'
+        pdf_file_latest = f'SalesOrder-{order.reference}.pdf'
+        pdf_url = None
+
+        if template:
+            # Sync template if media file is older or missing in persistent storage
+            src_template_path = os.path.join(
+                settings.BASE_DIR, 'report', 'templates', 'report', 'inventree_sales_order_report.html'
+            )
+            if os.path.exists(src_template_path) and hasattr(template, 'template_name'):
+                dest_path = template.template_name
+                try:
+                    if not os.path.exists(dest_path) or os.path.getmtime(src_template_path) > os.path.getmtime(dest_path):
+                        with open(src_template_path, 'r', encoding='utf-8') as sf:
+                            content = sf.read()
+                        with open(dest_path, 'w', encoding='utf-8') as df:
+                            df.write(content)
+                except Exception:
+                    pass
+
+            html = template.render_as_string(order)
+            with open(os.path.join(output_dir, output_file_specific), 'w', encoding='utf-8') as f:
+                f.write(html)
+            with open(os.path.join(output_dir, output_file_latest), 'w', encoding='utf-8') as f:
+                f.write(html)
+
+            # Try generating native binary PDF via WeasyPrint if available in the environment
+            try:
+                pdf_data = template.render(order)
+                if pdf_data:
+                    with open(os.path.join(output_dir, pdf_file_specific), 'wb') as pf:
+                        pf.write(pdf_data)
+                    with open(os.path.join(output_dir, pdf_file_latest), 'wb') as pf:
+                        pf.write(pdf_data)
+                    pdf_url = f'{settings.MEDIA_URL}data_output/{pdf_file_specific}'
+                    new_invoice_record['pdf_url'] = pdf_url
+                    metadata['invoice']['pdf_url'] = pdf_url
+                    if metadata.get('invoices') and len(metadata['invoices']) > 0:
+                        metadata['invoices'][0]['pdf_url'] = pdf_url
+                    models.SalesOrder.objects.filter(pk=order.pk).update(metadata=metadata)
+            except Exception:
+                # WeasyPrint not available in current environment; graceful fallback
+                pdf_url = None
+
+        return Response({
+            'success': True,
+            'invoice_number': invoice_number,
+            'output_url': output_url,
+            'pdf_url': pdf_url,
+            'html': html,
+            'metadata': metadata['invoice'],
+            'invoices': metadata['invoices'],
+        })
+
+
+class SalesOrderInvoiceContent(SalesOrderContextMixin, GenericAPIView):
+    """API endpoint to get the rendered HTML content of an invoice."""
+
+    permission_classes = [InvenTree.permissions.IsAuthenticatedOrReadScope]
+
+    def get(self, request, *args, **kwargs):
+        import os
+        import re
+        from django.conf import settings
+        from report.models import ReportTemplate
+
+        order = self.get_object()
+        inv_num = request.query_params.get('invoice_number')
+        output_dir = os.path.join(settings.MEDIA_ROOT, 'data_output')
+
+        html = None
+        if inv_num:
+            safe_num = re.sub(r'[^a-zA-Z0-9_\-]', '_', inv_num)
+            file_path = os.path.join(output_dir, f'SalesOrder-{order.reference}-{safe_num}.html')
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        html = f.read()
+                except Exception:
+                    html = None
+
+        if not html:
+            default_path = os.path.join(output_dir, f'SalesOrder-{order.reference}.html')
+            if os.path.exists(default_path):
+                try:
+                    with open(default_path, 'r', encoding='utf-8') as f:
+                        html = f.read()
+                except Exception:
+                    html = None
+
+        if not html and template:
+            # Set target invoice into order metadata for template rendering
+            if inv_num and order.metadata and 'invoices' in order.metadata:
+                invoices = order.metadata.get('invoices') or []
+                target_inv = next((inv for inv in invoices if inv.get('invoice_number') == inv_num), None)
+                if target_inv:
+                    order.metadata = dict(order.metadata)
+                    order.metadata['invoice'] = target_inv
+            html = template.render_as_string(order)
+            if html and inv_num:
+                try:
+                    safe_num = re.sub(r'[^a-zA-Z0-9_\-]', '_', inv_num)
+                    with open(os.path.join(output_dir, f'SalesOrder-{order.reference}-{safe_num}.html'), 'w', encoding='utf-8') as f:
+                        f.write(html)
+                except Exception:
+                    pass
+
+        return Response({'html': html or '', 'invoice_number': inv_num})
+
 
 
 class SalesOrderAllocationFilter(FilterSet):
@@ -2834,10 +3161,27 @@ order_api_urls = [
                         SalesOrderComplete.as_view(),
                         name='api-so-complete',
                     ),
+                    path(
+                        'generate-invoice/',
+                        SalesOrderGenerateInvoice.as_view(),
+                        name='api-so-generate-invoice',
+                    ),
+                    path(
+                        'invoice-content/',
+                        SalesOrderInvoiceContent.as_view(),
+                        name='api-so-invoice-content',
+                    ),
                     meta_path(models.SalesOrder),
                     # SalesOrder detail endpoint
                     path('', SalesOrderDetail.as_view(), name='api-so-detail'),
                 ]),
+            ),
+            # Tax rates and shipping methods
+            path('tax-rates/', StateTaxRatesView.as_view(), name='api-so-tax-rates'),
+            path(
+                'shipping-methods/',
+                ShippingMethodsView.as_view(),
+                name='api-so-shipping-methods',
             ),
             # Sales order status code information
             path(

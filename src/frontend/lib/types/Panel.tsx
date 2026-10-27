@@ -18,6 +18,7 @@ export type PanelType = {
   showHeadline?: boolean;
   supportsDirty?: boolean;
   hotkey?: string;
+  onClick?: () => void;
 };
 
 /**

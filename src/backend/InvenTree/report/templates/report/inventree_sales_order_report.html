@@ -5,74 +5,882 @@
 {% load barcode %}
 {% load inventree_extras %}
 
+{% block page_size %}
+size: letter portrait;
+{% endblock page_size %}
+
+{% block page_margin %}
+margin: 0mm !important;
+{% endblock page_margin %}
+
+{% block top_left %}content: none !important;{% endblock top_left %}
+{% block top_center %}content: none !important;{% endblock top_center %}
+{% block top_right %}content: none !important;{% endblock top_right %}
+{% block bottom_left %}content: none !important;{% endblock bottom_left %}
+{% block bottom_center %}content: none !important;{% endblock bottom_center %}
+{% block bottom_right %}content: none !important;{% endblock bottom_right %}
+
+{% block header_style %}
+display: none !important;
+height: 0px !important;
+margin: 0 !important;
+padding: 0 !important;
+{% endblock header_style %}
+
+{% block footer_style %}
+display: none !important;
+height: 0px !important;
+margin: 0 !important;
+padding: 0 !important;
+{% endblock footer_style %}
+
+{% block style %}
+
+@page {
+    size: letter portrait;
+    margin: 0mm !important;
+}
+
+/* Global Document Reset */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #111;
+    font-size: 8.5pt;
+    line-height: 1.35;
+    background-color: #f1f5f9;
+    margin: 0;
+    padding: 0;
+}
+
+/* Screen Action Bar (Hidden when printing or rendering PDF) */
+.screen-actions-bar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #0f172a;
+    color: #fff;
+    padding: 10px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    font-size: 13px;
+    margin-bottom: 25px;
+}
+
+.screen-actions-bar-inner {
+    max-width: 860px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.screen-actions-bar button {
+    background: #0284c7;
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.15s ease;
+}
+
+.screen-actions-bar button:hover {
+    background: #0369a1;
+}
+
+/* Paper Container for Screen Presentation */
+.invoice-paper {
+    max-width: 860px;
+    width: calc(100% - 48px);
+    margin: 0 auto 30px auto;
+    background: #ffffff;
+    padding: 26px 32px 18px 32px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    min-height: 960px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-sizing: border-box;
+}
+
+.inv-main-content {
+    flex: 1 0 auto;
+}
+
+.inv-footer-wrapper {
+    margin-top: auto;
+    padding-top: 15px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+@media print {
+    @page {
+        size: letter portrait;
+        margin: 0mm !important;
+    }
+    html, body {
+        background-color: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .screen-actions-bar {
+        display: none !important;
+    }
+    .header, .footer {
+        display: none !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .content {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+    }
+    .invoice-paper {
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 8mm 12mm 6mm 12mm !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-sizing: border-box !important;
+        min-height: 268mm !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+        page-break-before: avoid !important;
+        break-before: avoid !important;
+    }
+    .inv-main-content {
+        flex: 1 0 auto !important;
+    }
+    .inv-footer-wrapper {
+        margin-top: auto !important;
+        padding-top: 8px !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+    .inv-barcode-footer {
+        margin-top: 0 !important;
+        page-break-inside: avoid !important;
+    }
+    .inv-legal-foot {
+        margin-top: 3px !important;
+        page-break-inside: avoid !important;
+    }
+}
+
+/* Header Grid */
+.inv-header-container {
+    display: table;
+    width: 100%;
+    margin-bottom: 12px;
+}
+
+.inv-header-left {
+    display: table-cell;
+    width: 33%;
+    vertical-align: top;
+    font-size: 8.5pt;
+    line-height: 1.3;
+}
+
+.inv-company-name {
+    font-size: 10pt;
+    font-weight: bold;
+    margin-bottom: 2px;
+    color: #0f172a;
+}
+
+.inv-header-center {
+    display: table-cell;
+    width: 37%;
+    vertical-align: top;
+    text-align: center;
+}
+
+.inv-header-right {
+    display: table-cell;
+    width: 30%;
+    vertical-align: top;
+    text-align: right;
+}
+
+.inv-title {
+    font-size: 18pt;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    color: #000;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Order Box */
+.order-box-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1.5px solid #222;
+    margin-bottom: 4px;
+    font-size: 8pt;
+}
+
+.order-box-table th, .order-box-table td {
+    border: 1px solid #444;
+    padding: 3px 5px;
+    text-align: center;
+}
+
+.order-box-table th {
+    background-color: #f8fafc;
+    font-weight: 600;
+    color: #334155;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+}
+
+.order-number-cell {
+    font-size: 10pt;
+    font-weight: bold;
+    color: #0284c7;
+    padding: 4px !important;
+}
+
+.order-sub-caption {
+    font-size: 7.5pt;
+    color: #475569;
+    text-align: right;
+    margin-top: 3px;
+    font-weight: 600;
+}
+
+/* Addresses Section */
+.inv-address-grid {
+    display: table;
+    width: 100%;
+    margin-top: 14px;
+    margin-bottom: 10px;
+    font-size: 8.5pt;
+}
+
+.inv-address-cell {
+    display: table-cell;
+    width: 50%;
+    vertical-align: top;
+    padding-right: 15px;
+}
+
+.inv-address-title {
+    font-weight: bold;
+    font-size: 9pt;
+    margin-bottom: 3px;
+    color: #000;
+}
+
+.inv-address-body {
+    line-height: 1.35;
+    color: #222;
+}
+
+.inv-cust-meta {
+    display: table;
+    width: 100%;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    font-size: 8pt;
+}
+
+.inv-cust-meta-left {
+    display: table-cell;
+    width: 50%;
+    font-weight: bold;
+}
+
+.inv-cust-meta-right {
+    display: table-cell;
+    width: 50%;
+    text-align: right;
+    font-weight: 600;
+    color: #334155;
+}
+
+/* Order Details Bar (PO Number, Ship Route, Taker) */
+.order-route-bar {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1.5px solid #222;
+    margin-bottom: 12px;
+    font-size: 8pt;
+}
+
+.order-route-bar th {
+    border: 1px solid #444;
+    background-color: #f8fafc;
+    padding: 3px 6px;
+    font-style: italic;
+    font-weight: 600;
+    text-align: center;
+    color: #1e293b;
+    width: 33.33%;
+}
+
+.order-route-bar td {
+    border: 1px solid #444;
+    padding: 4px 6px;
+    text-align: center;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+/* Line Items Table */
+.inv-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-top: 1.5px solid #222;
+    border-bottom: 1.5px solid #222;
+    margin-top: 8px;
+    margin-bottom: 12px;
+    font-size: 8pt;
+}
+
+.inv-items-table th {
+    border-top: 1.5px solid #222;
+    border-bottom: 1px solid #444;
+    padding: 3px 4px;
+    font-size: 7.5pt;
+    font-weight: 700;
+    color: #111;
+}
+
+.inv-items-table th.grouped-head {
+    border-bottom: 1px solid #999;
+    font-style: italic;
+    text-align: center;
+    background-color: #fbfbfb;
+}
+
+.inv-items-table th.sub-head {
+    font-style: italic;
+    font-weight: 600;
+    color: #333;
+}
+
+.inv-items-table td {
+    padding: 3px 4px;
+    vertical-align: top;
+    border: none;
+}
+
+.inv-item-row-main td {
+    border-top: 1px solid #ddd;
+}
+
+.inv-item-row-sub td {
+    padding-top: 0;
+    padding-bottom: 5px;
+    color: #475569;
+    font-size: 7.5pt;
+}
+
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+
+/* Totals Section */
+.inv-totals-container {
+    display: table;
+    width: 100%;
+    margin-top: 10px;
+    border-top: 1px solid #222;
+    padding-top: 8px;
+    font-size: 8.5pt;
+}
+
+.inv-totals-left {
+    display: table-cell;
+    width: 50%;
+    vertical-align: top;
+    font-style: italic;
+    color: #333;
+}
+
+.inv-totals-right {
+    display: table-cell;
+    width: 50%;
+    vertical-align: top;
+    text-align: right;
+}
+
+.totals-table {
+    float: right;
+    border-collapse: collapse;
+    font-size: 9pt;
+}
+
+.totals-table td {
+    padding: 3px 8px;
+    border: none;
+}
+
+.totals-label {
+    text-align: right;
+    font-weight: 700;
+    font-style: italic;
+    color: #111;
+}
+
+.totals-value {
+    text-align: right;
+    font-weight: 600;
+    min-width: 90px;
+}
+
+.amount-due-row td {
+    border-top: 2px solid #222;
+    border-bottom: 3px double #222;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    font-size: 10.5pt;
+    font-weight: 900;
+}
+
+.amount-due-label {
+    font-style: italic;
+    text-transform: uppercase;
+}
+
+.currency-note {
+    font-size: 7.5pt;
+    font-style: italic;
+    color: #555;
+    text-align: right;
+    margin-top: 3px;
+}
+
+/* Footer & Barcode */
+.inv-barcode-footer {
+    margin-top: 14px;
+    text-align: center;
+    page-break-inside: avoid;
+}
+
+.barcode-image {
+    max-height: 36px;
+    display: inline-block;
+}
+
+.document-id-text {
+    font-size: 7.5pt;
+    font-weight: 600;
+    color: #111;
+    margin-top: 2px;
+    letter-spacing: 0.5px;
+}
+
+.inv-legal-foot {
+    display: table;
+    width: 100%;
+    margin-top: 8px;
+    font-size: 6.5pt;
+    color: #64748b;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 4px;
+    page-break-inside: avoid;
+}
+
+{% endblock style %}
+
 {% block header_content %}
-
-    <img class='logo' src='{% company_image customer %}' alt="{{ customer }}" width='150'>
-
-    <div class='header-right'>
-        <h3>{% trans "Sales Order" %} {{ prefix }}{{ reference }}</h3>
-        {{ customer.name }}
-    </div>
-
+<!-- InvenTree header hook left empty to render standard structured enterprise invoice -->
 {% endblock header_content %}
 
 {% block page_content %}
 
-<h3>{% trans "Line Items" %}</h3>
+<title>Invoice - {{ order.metadata.invoice.invoice_number|default:order.reference }}</title>
 
-<table class='table table-striped table-condensed'>
+<!-- Screen-only Action Bar for immediate PDF download / printing -->
+<div class="screen-actions-bar">
+    <div class="screen-actions-bar-inner">
+        <div>
+            <strong>TPI Inventory Invoice Preview</strong> &nbsp;|&nbsp; <span>Order {{ order.reference }}</span>
+        </div>
+        <div>
+            <button onclick="window.print()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 9V2h12v7"></path>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <path d="M6 14h12v8H6z"></path>
+                </svg>
+                Print / Save as PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="invoice-paper">
+<div class="inv-main-content">
+
+<!-- Header Section -->
+<div class="inv-header-container">
+    
+    <!-- Top Left: Company Info -->
+    <div class="inv-header-left">
+        <div class="inv-company-name">TPI Inventory Business</div>
+        <div>8198 Terminal Rd #107</div>
+        <div>Lorton, VA 22079</div>
+        <div>UNITED STATES</div>
+        <div style="margin-top: 4px;">Phone: 747-212-1377</div>
+        <div>support@tpi-inventory.com</div>
+    </div>
+
+    <!-- Top Center: TPI Business Icon & Logo -->
+    <div class="inv-header-center">
+        <div style="display: inline-block; text-align: center;">
+            <svg width="220" height="65" viewBox="0 0 220 65" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="tpiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#0284c7" />
+                        <stop offset="100%" stop-color="#0369a1" />
+                    </linearGradient>
+                </defs>
+                <!-- Isometric Cube Emblem -->
+                <g transform="translate(10, 10)">
+                    <rect x="0" y="0" width="44" height="44" rx="10" fill="url(#tpiGrad)" />
+                    <!-- Cube Wireframe -->
+                    <path d="M22 10 L34 17 L22 24 L10 17 Z" fill="#ffffff" fill-opacity="0.95" />
+                    <path d="M10 17 L22 24 L22 36 L10 29 Z" fill="#bae6fd" />
+                    <path d="M22 24 L34 17 L34 29 L22 36 Z" fill="#7dd3fc" />
+                </g>
+                <!-- Typography -->
+                <text x="64" y="32" font-family="'Arial Black', -apple-system, sans-serif" font-size="20" font-weight="900" fill="#0f172a" letter-spacing="1">TPI</text>
+                <text x="112" y="32" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="17" font-weight="700" fill="#0284c7" letter-spacing="0.5">INVENTORY</text>
+                <text x="65" y="46" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7.5" font-weight="600" fill="#64748b" letter-spacing="1.2">INDUSTRIAL SUPPLY &amp; HOSE SOLUTIONS</text>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Top Right: Title and Order Box -->
+    <div class="inv-header-right">
+        <div class="inv-title">
+            {% if order.status == 10 %}QUOTATION{% else %}INVOICE{% endif %}
+        </div>
+        <table class="order-box-table">
+            <thead>
+                <tr>
+                    <th colspan="2">{% if order.metadata.invoice.invoice_number %}Invoice Number{% else %}Order Number{% endif %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="2" class="order-number-cell">{% if order.metadata.invoice.invoice_number %}{{ order.metadata.invoice.invoice_number }}{% else %}{{ order.reference }}{% endif %}</td>
+                </tr>
+                <tr>
+                    <th>Order Date</th>
+                    <th>Page</th>
+                </tr>
+                <tr>
+                    <td>{{ order.creation_date|default:date }}</td>
+                    <td>1 of 1</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="order-sub-caption">
+            {% if order.metadata.invoice.invoice_number %}Order Ref: {{ order.reference }} | {% endif %}Status: {{ order.get_status_display|upper }}
+            {% if order.target_date %} | Due: {{ order.target_date }}{% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Addresses (Bill To & Ship To) -->
+<div class="inv-address-grid">
+    <div class="inv-address-cell">
+        <div class="inv-address-title">Bill To:</div>
+        <div class="inv-address-body">
+            <strong>{{ customer.name }}</strong><br>
+            {% if customer.address %}{{ customer.address|linebreaksbr }}<br>{% else %}1440 Monroe St<br>Madison, WI 53711<br>{% endif %}
+            UNITED STATES<br>
+            {% if customer.phone %}{{ customer.phone }}<br>{% endif %}
+        </div>
+    </div>
+    <div class="inv-address-cell">
+        <div class="inv-address-title">Ship To:</div>
+        <div class="inv-address-body">
+            <strong>{{ customer.name }}</strong><br>
+            {% if customer.shipping_address %}{{ customer.shipping_address|linebreaksbr }}<br>{% elif customer.address %}{{ customer.address|linebreaksbr }}<br>{% else %}1440 Monroe St<br>Madison, WI 53711<br>{% endif %}
+            UNITED STATES<br>
+        </div>
+    </div>
+</div>
+
+<!-- Customer ID & Contact Details -->
+<div class="inv-cust-meta">
+    <div class="inv-cust-meta-left">
+        Customer ID: &nbsp;<span style="font-weight: normal;">{{ customer.pk|stringformat:"06d" }}</span>
+    </div>
+    <div class="inv-cust-meta-right">
+        Requested By: &nbsp;<span style="color: #000;">{% if order.created_by %}{{ order.created_by.get_full_name|default:order.created_by.username }}{% else %}Jon Taylor{% endif %}</span>
+    </div>
+</div>
+
+<!-- Order Route Details Bar -->
+<table class="order-route-bar">
     <thead>
         <tr>
-            <th>{% trans "Part" %}</th>
-            <th>{% trans "Reference" %}</th>
-            <th>{% trans "Quantity" %}</th>
-            <th>{% trans "Unit Price" %}</th>
-            <th>{% trans "Total Price" %}</th>
-            <th>{% trans "Note" %}</th>
+            <th>PO Number</th>
+            <th>Ship Route</th>
+            <th>Taker</th>
         </tr>
     </thead>
     <tbody>
-        {% for line in lines.all %}
         <tr>
-            <td>
-                <div class='thumb-container'>
-                    <img src='{% part_image line.part height=240 %}' alt='{% trans "Part image" %}' class='part-thumb'>
-                </div>
-                <div class='part-text'>
-                    {{ line.part.full_name }}
-                </div>
-            </td>
-            <td>{{ line.reference }}</td>
-            <td>{% decimal line.quantity %}</td>
-            <td>{% render_currency line.price %}</td>
-            <td>{% render_currency line.total_line_price %}</td>
-            <td>{{ line.notes }}</td>
-        </tr>
-        {% endfor %}
-
-        {% if extra_lines %}
-        <tr><th colspan='6'>{% trans "Extra Line Items" %}</th></tr>
-        {% for line in extra_lines.all %}
-        <tr>
-            <td><!-- No part --></td>
-            <td>{{ line.reference }}</td>
-            <td>{% decimal line.quantity %}</td>
-            <td>{% render_currency line.price %}</td>
-            <td>{% render_currency line.total_line_price %}</td>
-            <td>{{ line.notes }}</td>
-        </tr>
-        {% endfor %}
-        {% endif %}
-
-        <tr>
-            <td></td>
-            <td></td>
-            <td></td>
-            <th>{% trans "Total" %}</th>
-            <td>{% render_currency order.total_price currency=order.currency %}</td>
-            <td></td>
+            <td>{{ order.customer_reference|default:"-" }}</td>
+            <td>{{ order.metadata.invoice.ship_method|default:"Standard Freight" }}</td>
+            <td>{% if order.responsible %}{{ order.responsible.name|upper }}{% elif order.created_by %}{{ order.created_by.username|upper }}{% else %}JAROD.PRESCOTT{% endif %}</td>
         </tr>
     </tbody>
 </table>
+
+<!-- Line Items Table -->
+<table class="inv-items-table">
+    <thead>
+        <tr>
+            <th colspan="5" class="grouped-head">Quantities</th>
+            <th rowspan="2" class="text-left" style="vertical-align: middle; width: 36%;">
+                Item ID<br>
+                <span class="sub-head">Item Description</span>
+            </th>
+            <th colspan="3" class="grouped-head">Pricing</th>
+        </tr>
+        <tr>
+            <th class="sub-head text-right" style="width: 8%;">Ordered</th>
+            <th class="sub-head text-right" style="width: 8%;">Allocated</th>
+            <th class="sub-head text-right" style="width: 8%;">Remaining</th>
+            <th class="sub-head text-center" style="width: 6%;">UOM</th>
+            <th class="sub-head text-center" style="width: 4%;">Disp.</th>
+            <th class="sub-head text-center" style="width: 6%;">UOM</th>
+            <th class="sub-head text-right" style="width: 11%;">Unit Price</th>
+            <th class="sub-head text-right" style="width: 13%;">Extended Price</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if order.metadata.invoice.items %}
+            {% for item in order.metadata.invoice.items %}
+            <tr class="inv-item-row-main">
+                <td class="text-right">{{ item.quantity }}</td>
+                <td class="text-right">{{ item.quantity }}</td>
+                <td class="text-right">{{ item.quantity }}</td>
+                <td class="text-center">{{ item.units|default:"pcs" }}</td>
+                <td class="text-center">OK</td>
+                <td class="text-left">
+                    <strong>{% if item.part_ipn %}{{ item.part_ipn }}{% else %}{{ item.part_name }}{% endif %}</strong>
+                </td>
+                <td class="text-center">{{ item.units|default:"pcs" }}</td>
+                <td class="text-right">${{ item.unit_price|floatformat:2 }}</td>
+                <td class="text-right"><strong>${{ item.total_price|floatformat:2 }}</strong></td>
+            </tr>
+            <tr class="inv-item-row-sub">
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="text-center">1.0</td>
+                <td></td>
+                <td class="text-left">
+                    {{ item.part_name }}
+                    {% if item.description and item.description != item.part_name and item.description != item.part_ipn %}<br><span style="font-size: 7pt; color: #64748b;">{{ item.description }}</span>{% endif %}
+                </td>
+                <td class="text-center">1.0</td>
+                <td></td>
+                <td></td>
+            </tr>
+            {% endfor %}
+        {% else %}
+            {% for line in lines.all %}
+            <tr class="inv-item-row-main">
+                <td class="text-right">{% decimal line.quantity %}</td>
+                <td class="text-right">{% decimal line.allocated_quantity %}</td>
+                <td class="text-right">{% decimal line.quantity %}</td>
+                <td class="text-center">{{ line.part.units|default:"pcs" }}</td>
+                <td class="text-center">OK</td>
+                <td class="text-left">
+                    <strong>{{ line.part.IPN|default:line.part.name }}</strong>
+                </td>
+                <td class="text-center">{{ line.part.units|default:"pcs" }}</td>
+                <td class="text-right">{% render_currency line.price %}</td>
+                <td class="text-right"><strong>{% render_currency line.total_line_price %}</strong></td>
+            </tr>
+            <tr class="inv-item-row-sub">
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="text-center">1.0</td>
+                <td></td>
+                <td class="text-left">
+                    {{ line.part.description|default:line.part.full_name }}
+                    {% if line.notes %}<br><span style="font-size: 7pt; color: #64748b;">Note: {{ line.notes }}</span>{% endif %}
+                </td>
+                <td class="text-center">1.0</td>
+                <td></td>
+                <td></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9" class="text-center" style="padding: 15px; color: #64748b;">
+                    No line items in this order.
+                </td>
+            </tr>
+            {% endfor %}
+        {% endif %}
+
+        {% if order.metadata.invoice.extra_items %}
+            {% for extra in order.metadata.invoice.extra_items %}
+            <tr class="inv-item-row-main">
+                <td class="text-right">{{ extra.quantity }}</td>
+                <td class="text-right">-</td>
+                <td class="text-right">{{ extra.quantity }}</td>
+                <td class="text-center">EA</td>
+                <td class="text-center">OK</td>
+                <td class="text-left">
+                    <strong>{{ extra.description|default:"Additional Charge" }}</strong>
+                </td>
+                <td class="text-center">EA</td>
+                <td class="text-right">${{ extra.unit_price|floatformat:2 }}</td>
+                <td class="text-right"><strong>${{ extra.total_price|floatformat:2 }}</strong></td>
+            </tr>
+            <tr class="inv-item-row-sub">
+                <td colspan="5"></td>
+                <td class="text-left">{{ extra.notes|default:"Additional service / freight charge" }}</td>
+                <td colspan="3"></td>
+            </tr>
+            {% endfor %}
+        {% elif extra_lines %}
+            {% for line in extra_lines.all %}
+            <tr class="inv-item-row-main">
+                <td class="text-right">{% decimal line.quantity %}</td>
+                <td class="text-right">-</td>
+                <td class="text-right">{% decimal line.quantity %}</td>
+                <td class="text-center">EA</td>
+                <td class="text-center">OK</td>
+                <td class="text-left">
+                    <strong>{{ line.reference|default:"Extra Charge" }}</strong>
+                </td>
+                <td class="text-center">EA</td>
+                <td class="text-right">{% render_currency line.price %}</td>
+                <td class="text-right"><strong>{% render_currency line.total_line_price %}</strong></td>
+            </tr>
+            <tr class="inv-item-row-sub">
+                <td colspan="5"></td>
+                <td class="text-left">{{ line.notes|default:"Additional service / freight charge" }}</td>
+                <td colspan="3"></td>
+            </tr>
+            {% endfor %}
+        {% endif %}
+    </tbody>
+</table>
+
+<!-- Totals Summary Section -->
+<div class="inv-totals-container">
+    <div class="inv-totals-left">
+        Total Lines: &nbsp;<strong>{% if order.metadata.invoice.items %}{{ order.metadata.invoice.items|length }}{% else %}{{ lines.count }}{% endif %}</strong>
+        {% if order.metadata.invoice.extra_items and order.metadata.invoice.extra_items|length > 0 %}
+        &nbsp;&plus;&nbsp;<strong>{{ order.metadata.invoice.extra_items|length }}</strong> extra charge{% if order.metadata.invoice.extra_items|length > 1 %}s{% endif %}
+        {% endif %}
+    </div>
+    <div class="inv-totals-right">
+        <table class="totals-table">
+            <tr>
+                <td class="totals-label">SUB-TOTAL:</td>
+                <td class="totals-value">
+                    {% if order.metadata.invoice.subtotal %}
+                        ${{ order.metadata.invoice.subtotal|floatformat:2 }}
+                    {% else %}
+                        {% render_currency order.total_price currency=order.currency %}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="totals-label">
+                    {% if order.metadata.invoice.tax_rate and order.metadata.invoice.tax_rate != '0' and order.metadata.invoice.tax_rate != 0 %}
+                        TAX ({{ order.metadata.invoice.tax_rate }}% {{ order.metadata.invoice.tax_state|default:"" }}):
+                    {% else %}
+                        TAX:
+                    {% endif %}
+                </td>
+                <td class="totals-value">
+                    {% if order.metadata.invoice.tax_amount is not None %}
+                        ${{ order.metadata.invoice.tax_amount|floatformat:2 }}
+                    {% else %}
+                        $0.00
+                    {% endif %}
+                </td>
+            </tr>
+            <tr class="amount-due-row">
+                <td class="totals-label amount-due-label">AMOUNT DUE:</td>
+                <td class="totals-value">
+                    {% if order.metadata.invoice.total_amount_due %}
+                        ${{ order.metadata.invoice.total_amount_due|floatformat:2 }}
+                    {% else %}
+                        {% render_currency order.total_price currency=order.currency %}
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+        <div style="clear: both;"></div>
+        <div class="currency-note">US Dollars</div>
+    </div>
+</div>
+
+</div>
+<!-- End .inv-main-content -->
+
+<!-- Pinned Bottom Footer Section -->
+<div class="inv-footer-wrapper">
+    <!-- Barcode & Document Footer -->
+    <div class="inv-barcode-footer">
+        {% if order.reference %}
+        <div>
+            <img class="barcode-image" src="{% barcode order.metadata.invoice.invoice_number|default:order.reference format='PNG' %}" alt="Barcode">
+        </div>
+        <div class="document-id-text">
+            Document ID: {% if order.metadata.invoice.invoice_number %}{{ order.metadata.invoice.invoice_number }}{% else %}{{ order.reference }}{% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Legal & Timestamp Watermark -->
+    <div class="inv-legal-foot">
+        <div style="float: left;">
+            Generated by TPI Inventory on {% now "m/d/Y H:i:s" %}
+        </div>
+        <div style="float: right;">
+            Standard Terms &amp; Conditions Apply
+        </div>
+        <div style="clear: both;"></div>
+    </div>
+</div>
+
+</div>
+<!-- End .invoice-paper -->
 
 {% endblock page_content %}
