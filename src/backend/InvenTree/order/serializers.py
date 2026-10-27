@@ -10,6 +10,8 @@ from django.utils.translation import gettext_lazy as _
 
 from rest_framework import serializers
 from rest_framework.serializers import ValidationError
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from sql_util.utils import SubqueryCount, SubquerySum
 
 from djmoney.contrib.exchange.models import convert_money
@@ -48,6 +50,7 @@ from InvenTree.serializers import (
 )
 from InvenTree.tasks import batch_offload_tasks
 from order.status_codes import (
+    PurchaseOrderApprovalStatus,
     PurchaseOrderStatusGroups,
     ReturnOrderLineStatus,
     ReturnOrderStatus,
@@ -405,12 +408,20 @@ class PurchaseOrderSerializer(
             'order_currency',
             'destination',
             'updated_at',
+            'approval_status',
+            'approved_by',
+            'approved_by_detail',
+            'approval_date',
+            'approval_notes',
         ])
         read_only_fields = [
             'issue_date',
             'complete_date',
             'creation_date',
             'updated_at',
+            'approved_by',
+            'approved_by_detail',
+            'approval_date',
         ]
         extra_kwargs = {
             'supplier': {'required': True},
@@ -422,6 +433,35 @@ class PurchaseOrderSerializer(
         fields = super().skip_create_fields()
 
         return [*fields, 'duplicate']
+
+    approved_by_detail = UserSerializer(source='approved_by', read_only=True)
+    approval_status = serializers.SerializerMethodField()
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_approval_status(self, obj) -> str:
+        """Return dynamic approval status based on threshold."""
+        if obj.approval_status in [
+            PurchaseOrderApprovalStatus.APPROVED,
+            PurchaseOrderApprovalStatus.REJECTED,
+        ]:
+            return obj.approval_status
+
+        approval_required = get_global_setting(
+            'PURCHASEORDER_APPROVAL_REQUIRED', True
+        )
+        if not approval_required:
+            return PurchaseOrderApprovalStatus.EXEMPT
+
+        threshold = float(
+            get_global_setting(
+                'PURCHASEORDER_APPROVAL_THRESHOLD', 1000
+            )
+        )
+        total = float(obj.total_price.amount if obj.total_price is not None else 0.0)
+        if total <= threshold:
+            return PurchaseOrderApprovalStatus.EXEMPT
+
+        return obj.approval_status
 
     duplicate = DuplicateOptionsSerializer(
         order.models.PurchaseOrder.objects.all(),

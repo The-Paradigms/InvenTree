@@ -1,3 +1,4 @@
+import { t } from '@lingui/core/macro';
 import { ModelType } from '@lib/enums/ModelType';
 import type { TableFilter } from '@lib/types/Filters';
 import {
@@ -35,6 +36,18 @@ export default function PurchaseOrderFilters({
     OrderStatusFilter({ model: ModelType.purchaseorder }),
     OutstandingFilter(),
     OverdueFilter(),
+    {
+      name: 'approval_status',
+      label: t`Approval Status`,
+      description: t`Filter by approval status`,
+      type: 'choice',
+      choices: [
+        { value: 'pending', label: t`Pending Approval` },
+        { value: 'approved', label: t`Approved` },
+        { value: 'rejected', label: t`Rejected` },
+        { value: 'exempt', label: t`Exempt` }
+      ]
+    },
     AssignedToMeFilter(),
     ProjectCodeFilter(),
     HasProjectCodeFilter(),

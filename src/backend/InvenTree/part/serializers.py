@@ -355,6 +355,8 @@ class PartBriefSerializer(
             'assembly',
             'component',
             'minimum_stock',
+            'maximum_stock',
+            'in_stock',
             'is_template',
             'purchaseable',
             'salable',
@@ -384,6 +386,8 @@ class PartBriefSerializer(
             'metadata',
         ]
         read_only_fields = ['barcode_hash']
+
+    in_stock = serializers.FloatField(source='total_stock', read_only=True)
 
     category_default_location = serializers.IntegerField(
         read_only=True, allow_null=True

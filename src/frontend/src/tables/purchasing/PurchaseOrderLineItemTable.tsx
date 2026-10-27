@@ -335,6 +335,9 @@ export function PurchaseOrderLineItemTable({
     pk: selectedLine,
     title: t`Edit Line Item`,
     fields: editLineItemFields,
+    queryParams: new URLSearchParams({
+      part_detail: 'true'
+    }),
     onFormSuccess: orderDetailRefresh,
     table: table
   });

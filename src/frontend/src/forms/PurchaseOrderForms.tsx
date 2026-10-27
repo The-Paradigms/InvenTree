@@ -8,12 +8,15 @@ import {
   Group,
   HoverCard,
   Modal,
+  Stack,
   Table,
+  Text,
   TextInput
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
   IconAddressBook,
+  IconAlertTriangle,
   IconCalendar,
   IconCoins,
   IconCurrencyDollar,
@@ -85,10 +88,79 @@ export function usePurchaseOrderLineItemFields({
 
   // Internal part information
   const [part, setPart] = useState<any>({});
+  const [supplierPart, setSupplierPart] = useState<any>({});
   const [priceBreaks, setPriceBreaks] = useState<any[]>([]);
   const [suggestedPurchasePrice, setSuggestedPurchasePrice] = useState<
     string | undefined
   >(undefined);
+
+  const maxStock: number = useMemo(() => {
+    return toNumber(part?.maximum_stock) ?? 0;
+  }, [part?.maximum_stock]);
+
+  const currentStock: number = useMemo(() => {
+    return (
+      toNumber(
+        part?.in_stock ?? part?.total_in_stock ?? supplierPart?.in_stock
+      ) ?? 0
+    );
+  }, [part?.in_stock, part?.total_in_stock, supplierPart?.in_stock]);
+
+  const packQuantity: number = useMemo(() => {
+    const pq = toNumber(supplierPart?.pack_quantity_native);
+    return pq && pq > 0 ? pq : 1;
+  }, [supplierPart?.pack_quantity_native]);
+
+  const orderQuantity: number = useMemo(() => {
+    return toNumber(quantity) ?? 0;
+  }, [quantity]);
+
+  const totalOrderUnits: number = useMemo(() => {
+    return orderQuantity * packQuantity;
+  }, [orderQuantity, packQuantity]);
+
+  const projectedStock: number = useMemo(() => {
+    return currentStock + totalOrderUnits;
+  }, [currentStock, totalOrderUnits]);
+
+  const isOverstocked = useMemo(() => {
+    return (
+      maxStock > 0 &&
+      (projectedStock > maxStock || currentStock > maxStock)
+    );
+  }, [maxStock, projectedStock, currentStock]);
+
+  const stockWarning = useMemo(() => {
+    if (!isOverstocked) return undefined;
+
+    const units = part?.units ? ` ${part.units}` : '';
+    const diff = projectedStock - maxStock;
+
+    return (
+      <Alert
+        color='orange'
+        title={t`Maximum Stock Warning`}
+        icon={<IconAlertTriangle size={18} />}
+        mt='xs'
+        p='xs'
+      >
+        <Stack gap={4}>
+          <Text size='xs'>
+            {currentStock > maxStock
+              ? t`This part is already overstocked! Current stock is ${currentStock}${units} (maximum stock is ${maxStock}${units}). Ordering ${totalOrderUnits}${units} will increase total stock to ${projectedStock}${units}.`
+              : t`Ordering ${totalOrderUnits}${units} will exceed the maximum stock level of ${maxStock}${units}. Current stock: ${currentStock}${units}, projected total stock: ${projectedStock}${units} (exceeds maximum by ${diff}${units}).`}
+          </Text>
+        </Stack>
+      </Alert>
+    );
+  }, [
+    isOverstocked,
+    currentStock,
+    maxStock,
+    totalOrderUnits,
+    projectedStock,
+    part?.units
+  ]);
 
   // Update suggested purchase price when part, quantity, or price breaks change
   useEffect(() => {
@@ -135,8 +207,13 @@ export function usePurchaseOrderLineItemFields({
           price_breaks: true
         },
         onValueChange: (value, record) => {
-          setPriceBreaks(record?.price_breaks ?? []);
+          setPriceBreaks(
+            record?.price_breaks ??
+              record?.supplier_part_detail?.price_breaks ??
+              []
+          );
           setPart(record?.part_detail ?? {});
+          setSupplierPart(record?.supplier_part_detail ?? record ?? {});
         },
         adjustFilters: (adjust: ApiFormAdjustFilterType) => {
           return {
@@ -171,7 +248,8 @@ export function usePurchaseOrderLineItemFields({
       quantity: {
         onValueChange: (value) => {
           setQuantity(value);
-        }
+        },
+        postFieldContent: stockWarning
       },
       purchase_price: {
         icon: <IconCurrencyDollar />,
@@ -230,6 +308,9 @@ export function usePurchaseOrderLineItemFields({
     create,
     orderId,
     part,
+    supplierPart,
+    quantity,
+    stockWarning,
     globalSettings,
     supplierId,
     autoPricing,

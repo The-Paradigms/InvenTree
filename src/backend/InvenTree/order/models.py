@@ -63,6 +63,7 @@ from order.events import (
     TransferOrderEvents,
 )
 from order.status_codes import (
+    PurchaseOrderApprovalStatus,
     PurchaseOrderStatus,
     PurchaseOrderStatusGroups,
     ReturnOrderLineStatus,
@@ -780,6 +781,38 @@ class PurchaseOrder(TotalPriceMixin, Order):
         help_text=_('Destination for received items'),
     )
 
+    approval_status = models.CharField(
+        max_length=32,
+        choices=PurchaseOrderApprovalStatus.CHOICES,
+        default=PurchaseOrderApprovalStatus.PENDING,
+        verbose_name=_('Approval Status'),
+        help_text=_('Current managerial approval status'),
+        db_index=True,
+    )
+
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='approved_purchase_orders',
+        verbose_name=_('Approved By'),
+        help_text=_('User who authorized this purchase order'),
+    )
+
+    approval_date = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name=_('Approval Date'),
+        help_text=_('Date and time this order was approved'),
+    )
+
+    approval_notes = models.TextField(
+        blank=True,
+        verbose_name=_('Approval Notes'),
+        help_text=_('Notes or comments provided during approval or rejection'),
+    )
+
     @transaction.atomic
     def add_line_item(
         self,
@@ -872,6 +905,21 @@ class PurchaseOrder(TotalPriceMixin, Order):
 
         The order must currently be PENDING or ON_HOLD.
         """
+        # Dynamic Managerial Approval Check
+        approval_required = get_global_setting('PURCHASEORDER_APPROVAL_REQUIRED', True)
+        if approval_required:
+            threshold = float(get_global_setting('PURCHASEORDER_APPROVAL_THRESHOLD', 1000))
+            total = float(self.total_price.amount if self.total_price is not None else 0.0)
+            if total > threshold and self.approval_status != PurchaseOrderApprovalStatus.APPROVED:
+                raise ValidationError(
+                    _(
+                        'Cannot place order: Total value ({total}) exceeds the approval threshold ({threshold}) and has not been approved by an Inventory Manager or Admin.'
+                    ).format(
+                        total=f'${total:,.2f}',
+                        threshold=f'${threshold:,.2f}',
+                    )
+                )
+
         self.issue_date = InvenTree.helpers.current_date()
 
         notify_responsible(

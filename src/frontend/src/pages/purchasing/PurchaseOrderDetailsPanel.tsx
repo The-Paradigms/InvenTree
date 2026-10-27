@@ -165,6 +165,54 @@ export function PurchaseOrderDetailsPanel({
       label: t`Responsible`,
       badge: 'owner',
       hidden: !instance?.responsible
+    },
+    {
+      type: 'text',
+      name: 'approval_status',
+      label: t`Approval Status`,
+      icon: 'check',
+      hidden: !instance?.approval_status,
+      value_formatter: () => {
+        switch (instance?.approval_status) {
+          case 'approved':
+            return t`Approved`;
+          case 'rejected':
+            return t`Rejected`;
+          case 'pending':
+            return t`Pending Approval`;
+          case 'exempt':
+            return t`Exempt`;
+          default:
+            return instance?.approval_status;
+        }
+      }
+    },
+    {
+      type: 'text',
+      name: 'approved_by_detail',
+      label: t`Approved By`,
+      icon: 'user',
+      hidden: !instance?.approved_by_detail,
+      value_formatter: () => {
+        const u = instance?.approved_by_detail;
+        if (!u) return '';
+        const name = `${u.first_name || ''} ${u.last_name || ''}`.trim();
+        return name ? `${name} (${u.username})` : u.username;
+      }
+    },
+    {
+      type: 'date',
+      name: 'approval_date',
+      label: t`Approval Date`,
+      icon: 'calendar',
+      showTime: true,
+      hidden: !instance?.approval_date
+    },
+    {
+      type: 'text',
+      name: 'approval_notes',
+      label: t`Approval Notes`,
+      hidden: !instance?.approval_notes
     }
   ];
 

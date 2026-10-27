@@ -1,6 +1,12 @@
 import { t } from '@lingui/core/macro';
-import { Accordion, Stack } from '@mantine/core';
-import { IconInfoCircle, IconList, IconPackages } from '@tabler/icons-react';
+import { Accordion, Badge, Stack } from '@mantine/core';
+import {
+  IconCheck,
+  IconInfoCircle,
+  IconList,
+  IconPackages,
+  IconX
+} from '@tabler/icons-react';
 import { type ReactNode, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -227,47 +233,135 @@ export default function PurchaseOrderDetail() {
   }, [order, id, user, instanceInfo]);
 
   const issueOrder = useCreateApiFormModal({
-    url: apiUrl(ApiEndpoints.purchase_order_issue, order.pk),
+    url: apiUrl(ApiEndpoints.purchase_order_issue, id),
     title: t`Issue Purchase Order`,
+    fields: {},
+    ignorePermissionCheck: true,
     onFormSuccess: refreshInstance,
     preFormWarning: t`Issue this order`,
     successMessage: t`Order issued`
   });
 
+  const approveOrder = useCreateApiFormModal({
+    url: apiUrl(ApiEndpoints.purchase_order_approve, id),
+    title: t`Approve Purchase Order`,
+    ignorePermissionCheck: true,
+    fields: {
+      notes: {
+        label: t`Approval Notes`,
+        description: t`Optional notes regarding approval`,
+        field_type: 'string',
+        required: false
+      }
+    },
+    onFormSuccess: refreshInstance,
+    preFormWarning: t`Are you sure you want to approve this purchase order?`,
+    successMessage: t`Order approved`
+  });
+
+  const rejectOrder = useCreateApiFormModal({
+    url: apiUrl(ApiEndpoints.purchase_order_reject, id),
+    title: t`Reject Purchase Order`,
+    ignorePermissionCheck: true,
+    fields: {
+      notes: {
+        label: t`Rejection Reason`,
+        description: t`Reason for rejecting this purchase order`,
+        field_type: 'string',
+        required: true
+      }
+    },
+    onFormSuccess: refreshInstance,
+    preFormWarning: t`Are you sure you want to reject this purchase order? It will be placed on hold.`,
+    successMessage: t`Order rejected`
+  });
+
   const cancelOrder = useCreateApiFormModal({
-    url: apiUrl(ApiEndpoints.purchase_order_cancel, order.pk),
+    url: apiUrl(ApiEndpoints.purchase_order_cancel, id),
     title: t`Cancel Purchase Order`,
+    fields: {},
+    ignorePermissionCheck: true,
     onFormSuccess: refreshInstance,
     preFormWarning: t`Cancel this order`,
     successMessage: t`Order cancelled`
   });
 
   const holdOrder = useCreateApiFormModal({
-    url: apiUrl(ApiEndpoints.purchase_order_hold, order.pk),
+    url: apiUrl(ApiEndpoints.purchase_order_hold, id),
     title: t`Hold Purchase Order`,
+    fields: {},
+    ignorePermissionCheck: true,
     onFormSuccess: refreshInstance,
     preFormWarning: t`Place this order on hold`,
     successMessage: t`Order placed on hold`
   });
 
   const completeOrder = useCreateApiFormModal({
-    url: apiUrl(ApiEndpoints.purchase_order_complete, order.pk),
+    url: apiUrl(ApiEndpoints.purchase_order_complete, id),
     title: t`Complete Purchase Order`,
     successMessage: t`Order completed`,
     timeout: 10000,
+    ignorePermissionCheck: true,
     fields: {
-      accept_incomplete: {}
+      accept_incomplete: {
+        field_type: 'boolean',
+        label: t`Accept Incomplete`,
+        description: t`Allow order to be closed with incomplete line items`,
+        value: false
+      }
     },
     onFormSuccess: refreshInstance,
     preFormWarning: t`Mark this order as complete`
   });
 
+  const approvalRequired: boolean = useMemo(() => {
+    return globalSettings.isSet('PURCHASEORDER_APPROVAL_REQUIRED', true);
+  }, [globalSettings]);
+
+  const approvalThreshold: number = useMemo(() => {
+    const threshold = globalSettings.getSetting(
+      'PURCHASEORDER_APPROVAL_THRESHOLD',
+      '1000'
+    );
+    return parseFloat(threshold) || 0;
+  }, [globalSettings]);
+
+  const orderTotal: number = useMemo(() => {
+    return parseFloat(order.total_price ?? 0) || 0;
+  }, [order.total_price]);
+
+  const requiresApproval: boolean = useMemo(() => {
+    return approvalRequired && orderTotal > approvalThreshold;
+  }, [approvalRequired, orderTotal, approvalThreshold]);
+
+  const isApproved: boolean = useMemo(() => {
+    return (
+      order.approval_status === 'approved' ||
+      order.approval_status === 'exempt'
+    );
+  }, [order.approval_status]);
+
+  const isApprover: boolean = useMemo(() => {
+    if (user.isSuperuser() || user.isStaff()) {
+      return true;
+    }
+    const groups = user.user?.groups ?? [];
+    return groups.some((g: any) => {
+      const name = (typeof g === 'string' ? g : g.name || '').toLowerCase();
+      return ['inventory manager', 'inventory managers', 'admin'].includes(
+        name
+      );
+    });
+  }, [user]);
+
   const poActions = useMemo(() => {
+    const canAdd: boolean = user.hasAddRole(UserRoles.purchase_order);
     const canEdit: boolean = user.hasChangeRole(UserRoles.purchase_order);
 
     const canIssue: boolean =
-      canEdit &&
-      (order.status == poStatus.PENDING || order.status == poStatus.ON_HOLD);
+      canAdd &&
+      (order.status == poStatus.PENDING || order.status == poStatus.ON_HOLD) &&
+      (!requiresApproval || isApproved);
 
     const canHold: boolean =
       canEdit &&
@@ -280,8 +374,14 @@ export default function PurchaseOrderDetail() {
       order.status != poStatus.CANCELLED &&
       order.status != poStatus.COMPLETE;
 
+    const canApproveOrReject: boolean =
+      isApprover &&
+      requiresApproval &&
+      (order.status == poStatus.PENDING || order.status == poStatus.ON_HOLD);
+
     return [
       <PrimaryActionButton
+        key='action-issue'
         title={t`Issue Order`}
         icon='issue'
         hidden={!canIssue}
@@ -289,25 +389,49 @@ export default function PurchaseOrderDetail() {
         onClick={issueOrder.open}
       />,
       <PrimaryActionButton
+        key='action-approve'
+        title={t`Approve Order`}
+        leftSection={<IconCheck size={16} />}
+        hidden={!canApproveOrReject || order.approval_status === 'approved'}
+        color='teal'
+        onClick={approveOrder.open}
+      />,
+      <PrimaryActionButton
+        key='action-reject'
+        title={t`Reject Order`}
+        leftSection={<IconX size={16} />}
+        hidden={!canApproveOrReject || order.approval_status === 'rejected'}
+        color='red'
+        onClick={rejectOrder.open}
+      />,
+      <PrimaryActionButton
+        key='action-complete'
         title={t`Complete Order`}
         icon='complete'
         hidden={!canComplete}
         color='green'
         onClick={completeOrder.open}
       />,
-      <AdminButton model={ModelType.purchaseorder} id={order.pk} />,
+      <AdminButton
+        key='action-admin'
+        model={ModelType.purchaseorder}
+        id={order.pk}
+      />,
       <BarcodeActionDropdown
+        key='action-barcode'
         model={ModelType.purchaseorder}
         pk={order.pk}
         hash={order?.barcode_hash}
       />,
       <PrintingActions
+        key='action-print'
         modelType={ModelType.purchaseorder}
         items={[order.pk]}
         enableLabels
         enableReports
       />,
       <OptionsActionDropdown
+        key='action-options'
         tooltip={t`Order Actions`}
         actions={[
           EditItemAction({
@@ -335,19 +459,56 @@ export default function PurchaseOrderDetail() {
         ]}
       />
     ];
-  }, [id, order, user, poStatus]);
+  }, [
+    id,
+    order,
+    user,
+    poStatus,
+    requiresApproval,
+    isApproved,
+    isApprover
+  ]);
 
   const orderBadges: ReactNode[] = useMemo(() => {
-    return instanceQuery.isLoading
-      ? []
-      : [
-          <StatusRenderer
-            status={order.status_custom_key || order.status}
-            type={ModelType.purchaseorder}
-            options={{ size: 'lg' }}
-          />
-        ];
-  }, [order, instanceQuery]);
+    if (instanceQuery.isLoading) return [];
+
+    const badges: ReactNode[] = [
+      <StatusRenderer
+        key='order-status'
+        status={order.status_custom_key || order.status}
+        type={ModelType.purchaseorder}
+        options={{ size: 'lg' }}
+      />
+    ];
+
+    if (order.approval_status === 'approved') {
+      badges.push(
+        <Badge key='approval-status' color='teal' size='lg' variant='filled'>
+          {t`Approved`}
+        </Badge>
+      );
+    } else if (order.approval_status === 'rejected') {
+      badges.push(
+        <Badge key='approval-status' color='red' size='lg' variant='filled'>
+          {t`Approval Rejected`}
+        </Badge>
+      );
+    } else if (requiresApproval && order.approval_status === 'pending') {
+      badges.push(
+        <Badge key='approval-status' color='orange' size='lg' variant='filled'>
+          {t`Pending Approval`}
+        </Badge>
+      );
+    } else if (order.approval_status === 'exempt') {
+      badges.push(
+        <Badge key='approval-status' color='gray' size='lg' variant='light'>
+          {t`Approval Exempt`}
+        </Badge>
+      );
+    }
+
+    return badges;
+  }, [order, instanceQuery, requiresApproval]);
 
   const subtitle: string = useMemo(() => {
     let t = order.supplier_detail?.name || '';
@@ -361,6 +522,8 @@ export default function PurchaseOrderDetail() {
 
   return (
     <>
+      {approveOrder.modal}
+      {rejectOrder.modal}
       {issueOrder.modal}
       {holdOrder.modal}
       {cancelOrder.modal}

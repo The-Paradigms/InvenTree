@@ -648,6 +648,15 @@ export function AppSidebar() {
               )}
               {canViewPurchase && (
                 <SidebarItem
+                  icon={<IconShoppingCart size={16} />}
+                  label={t`Purchasing`}
+                  link='/purchasing/index/purchaseorders'
+                  active={isPurchasingActive}
+                  collapsed={isCollapsed}
+                />
+              )}
+              {canViewPurchase && (
+                <SidebarItem
                   icon={<IconUsers size={16} />}
                   label={t`Suppliers`}
                   link='/purchasing/index/suppliers'
@@ -661,15 +670,6 @@ export function AppSidebar() {
                   label={t`Manufacturing`}
                   link='/manufacturing'
                   active={isActive('manufacturing')}
-                  collapsed={isCollapsed}
-                />
-              )}
-              {canViewPurchase && (
-                <SidebarItem
-                  icon={<IconShoppingCart size={16} />}
-                  label={t`Purchasing`}
-                  link='/purchasing/index/purchaseorders'
-                  active={isPurchasingActive}
                   collapsed={isCollapsed}
                 />
               )}

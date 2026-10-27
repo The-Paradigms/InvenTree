@@ -1011,6 +1011,22 @@ SYSTEM_SETTINGS: dict[str, InvenTreeSettingsKeyType] = {
         'default': True,
         'validator': bool,
     },
+    'PURCHASEORDER_APPROVAL_REQUIRED': {
+        'name': _('Require PO Approval'),
+        'description': _(
+            'Require managerial approval for purchase orders exceeding threshold'
+        ),
+        'default': True,
+        'validator': bool,
+    },
+    'PURCHASEORDER_APPROVAL_THRESHOLD': {
+        'name': _('PO Approval Threshold'),
+        'description': _(
+            'Minimum purchase order total value requiring managerial approval'
+        ),
+        'default': 1000,
+        'validator': [int, MinValueValidator(0)],
+    },
     # login / SSO
     'LOGIN_ENABLE_PWD_FORGOT': {
         'name': _('Enable password forgot'),
