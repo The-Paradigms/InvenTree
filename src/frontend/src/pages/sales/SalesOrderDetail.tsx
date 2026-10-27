@@ -153,6 +153,7 @@ export default function SalesOrderDetail() {
         name: 'line-items',
         label: t`Line Items`,
         icon: <IconList />,
+        badge: order.line_items,
         content: (
           <Accordion
             multiple={true}
@@ -251,11 +252,17 @@ export default function SalesOrderDetail() {
     ];
   }, [order, id, user, soStatus, instanceInfo]);
 
+  const hasLineItems: boolean = useMemo(() => {
+    return (order.line_items ?? 0) > 0;
+  }, [order.line_items]);
+
   const issueOrder = useCreateApiFormModal({
     url: apiUrl(ApiEndpoints.sales_order_issue, order.pk),
     title: t`Issue Sales Order`,
     onFormSuccess: refreshInstance,
-    preFormWarning: t`Issue this order`,
+    preFormWarning: !hasLineItems
+      ? t`Cannot issue order: This sales order has no line items. Please add line items before issuing.`
+      : t`Issue this order`,
     successMessage: t`Order issued`
   });
 
@@ -329,8 +336,14 @@ export default function SalesOrderDetail() {
         title={t`Issue Order`}
         icon='issue'
         hidden={!canIssue}
+        disabled={!hasLineItems}
+        tooltip={
+          !hasLineItems
+            ? t`Cannot issue order: add at least one line item before proceeding`
+            : undefined
+        }
         color='blue'
-        onClick={issueOrder.open}
+        onClick={hasLineItems ? issueOrder.open : undefined}
       />,
       <PrimaryActionButton
         title={t`Ship Order`}
@@ -384,7 +397,7 @@ export default function SalesOrderDetail() {
         ]}
       />
     ];
-  }, [user, order, soStatus, globalSettings]);
+  }, [user, order, soStatus, globalSettings, hasLineItems]);
 
   const orderBadges: ReactNode[] = useMemo(() => {
     return instanceQuery.isLoading

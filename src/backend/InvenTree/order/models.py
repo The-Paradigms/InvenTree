@@ -1882,6 +1882,11 @@ class SalesOrder(TotalPriceMixin, Order):
 
         The order must currently be PENDING or ON_HOLD.
         """
+        if self.lines.count() == 0:
+            raise ValidationError(
+                _('Cannot issue order: Sales order must contain at least one line item.')
+            )
+
         self.issue_date = InvenTree.helpers.current_date()
 
         notify_responsible(

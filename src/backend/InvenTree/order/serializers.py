@@ -1273,6 +1273,17 @@ class SalesOrderSerializer(
 class SalesOrderIssueSerializer(OrderAdjustSerializer):
     """Serializer for issuing a SalesOrder."""
 
+    def validate(self, data):
+        """Validate that the sales order can be issued."""
+        data = super().validate(data)
+
+        if self.order.lines.count() == 0:
+            raise ValidationError(
+                _('Cannot issue order: Sales order must contain at least one line item.')
+            )
+
+        return data
+
     def save(self):
         """Save the serializer to 'issue' the order."""
         self.order.issue_order()

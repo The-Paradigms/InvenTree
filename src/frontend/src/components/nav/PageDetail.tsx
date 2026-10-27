@@ -255,7 +255,11 @@ function extractHotkeys(actions: ReactNode[]) {
     }
 
     // PrimaryActionButton - use the 'mod+A' hotkey if it is enabled
-    if (typeName === 'PrimaryActionButton' && action?.props?.hidden !== true) {
+    if (
+      typeName === 'PrimaryActionButton' &&
+      action?.props?.hidden !== true &&
+      action?.props?.disabled !== true
+    ) {
       if (primaryActionHotkeyAdded) return;
 
       const hotkey = action?.props?.hotkey ?? 'mod+A';

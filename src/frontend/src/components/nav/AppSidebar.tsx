@@ -619,7 +619,7 @@ export function AppSidebar() {
               <SidebarItem
                 icon={<IconBuildingStore size={16} />}
                 label={t`Stores`}
-                link='/stock'
+                link='/stock/location/index/'
                 active={isActive('stock')}
                 collapsed={isCollapsed}
               />
@@ -668,7 +668,7 @@ export function AppSidebar() {
                 <SidebarItem
                   icon={<IconBuildingFactory2 size={16} />}
                   label={t`Manufacturing`}
-                  link='/manufacturing'
+                  link='/manufacturing/index/'
                   active={isActive('manufacturing')}
                   collapsed={isCollapsed}
                 />
@@ -677,7 +677,7 @@ export function AppSidebar() {
                 <SidebarItem
                   icon={<IconTruckDelivery size={16} />}
                   label={t`Sales`}
-                  link='/sales'
+                  link='/sales/index/salesorders'
                   active={isActive('sales')}
                   collapsed={isCollapsed}
                 />
