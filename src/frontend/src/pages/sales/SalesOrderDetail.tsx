@@ -3,11 +3,12 @@ import { Accordion, Skeleton, Stack } from '@mantine/core';
 import {
   IconBookmark,
   IconCubeSend,
+  IconFileInvoice,
   IconInfoCircle,
   IconList,
   IconTools
 } from '@tabler/icons-react';
-import { type ReactNode, useMemo } from 'react';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { StylishText } from '@lib/components/StylishText';
@@ -16,6 +17,7 @@ import { ModelType } from '@lib/enums/ModelType';
 import { UserRoles } from '@lib/enums/Roles';
 import { apiUrl } from '@lib/functions/Api';
 import type { PanelType } from '@lib/types/Panel';
+import { api } from '../../App';
 import AdminButton from '../../components/buttons/AdminButton';
 import PrimaryActionButton from '../../components/buttons/PrimaryActionButton';
 import { PrintingActions } from '../../components/buttons/PrintingActions';
@@ -49,6 +51,8 @@ import ExtraLineItemTable from '../../tables/general/ExtraLineItemTable';
 import SalesOrderAllocationTable from '../../tables/sales/SalesOrderAllocationTable';
 import SalesOrderLineItemTable from '../../tables/sales/SalesOrderLineItemTable';
 import SalesOrderShipmentTable from '../../tables/sales/SalesOrderShipmentTable';
+import { GenerateInvoiceModal } from '../../components/modals/GenerateInvoiceModal';
+import { SalesOrderInvoicePanel } from './SalesOrderInvoicePanel';
 import { SalesOrderDetailsPanel } from './SalesOrderDetailsPanel';
 
 /**
@@ -60,6 +64,8 @@ export default function SalesOrderDetail() {
   const user = useUserState();
 
   const globalSettings = useGlobalSettingsState();
+
+  const [invoiceModalOpened, setInvoiceModalOpened] = useState<boolean>(false);
 
   const {
     instance: order,
@@ -228,6 +234,23 @@ export default function SalesOrderDetail() {
           <Skeleton />
         )
       },
+      {
+        name: 'invoices',
+        label: t`Generate Invoice (+)`,
+        icon: <IconFileInvoice />,
+        onClick: () => {
+          setInvoiceModalOpened(true);
+        },
+        content: order?.pk ? (
+          <SalesOrderInvoicePanel
+            order={order}
+            onOpenModal={() => setInvoiceModalOpened(true)}
+            refreshOrder={refreshInstance}
+          />
+        ) : (
+          <Skeleton />
+        )
+      },
       ParametersPanel({
         model_type: ModelType.salesorder,
         model_id: order.pk,
@@ -303,6 +326,8 @@ export default function SalesOrderDetail() {
       accept_incomplete: {}
     }
   });
+
+
 
   const soActions = useMemo(() => {
     const canEdit: boolean = user.hasChangeRole(UserRoles.sales_order);
@@ -431,6 +456,12 @@ export default function SalesOrderDetail() {
       {completeOrder.modal}
       {editSalesOrder.modal}
       {duplicateSalesOrder.modal}
+      <GenerateInvoiceModal
+        opened={invoiceModalOpened}
+        onClose={() => setInvoiceModalOpened(false)}
+        order={order}
+        onInvoiceGenerated={refreshInstance}
+      />
       <InstanceDetail
         query={instanceQuery}
         requiredRole={UserRoles.sales_order}

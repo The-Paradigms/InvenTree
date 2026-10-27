@@ -423,9 +423,10 @@ function BasePanelGroup({
                         key={`panel-tab-${group.id}-${panel.name}`}
                         expanded={expanded}
                         panel={panel}
-                        onClick={(event: any) =>
-                          handlePanelChange(panel.name, event)
-                        }
+                        onClick={(event: any) => {
+                          panel.onClick?.();
+                          handlePanelChange(panel.name, event);
+                        }}
                       />
                     )
                 )}

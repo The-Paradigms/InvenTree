@@ -1178,6 +1178,7 @@ class SalesOrderSerializer(
             'allocated_lines',
             'updated_at',
             'tags',
+            'metadata',
         ])
         read_only_fields = ['status', 'creation_date', 'shipment_date', 'updated_at']
         extra_kwargs = {'order_currency': {'required': False}}
