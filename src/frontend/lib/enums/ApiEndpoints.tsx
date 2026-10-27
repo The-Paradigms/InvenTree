@@ -172,6 +172,8 @@ export enum ApiEndpoints {
   purchase_order_hold = 'order/po/:id/hold/',
   purchase_order_cancel = 'order/po/:id/cancel/',
   purchase_order_complete = 'order/po/:id/complete/',
+  purchase_order_approve = 'order/po/:id/approve/',
+  purchase_order_reject = 'order/po/:id/reject/',
   purchase_order_line_list = 'order/po-line/',
   purchase_order_extra_line_list = 'order/po-extra-line/',
   purchase_order_receive = 'order/po/:id/receive/',

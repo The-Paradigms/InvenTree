@@ -47,6 +47,22 @@ class PurchaseOrderStatusGroups:
     COMPLETE = [PurchaseOrderStatus.COMPLETE.value]
 
 
+class PurchaseOrderApprovalStatus:
+    """Defines approval states for a PurchaseOrder."""
+
+    PENDING = 'pending'
+    APPROVED = 'approved'
+    REJECTED = 'rejected'
+    EXEMPT = 'exempt'
+
+    CHOICES = [
+        (PENDING, _('Pending Approval')),
+        (APPROVED, _('Approved')),
+        (REJECTED, _('Rejected')),
+        (EXEMPT, _('Exempt')),
+    ]
+
+
 class SalesOrderStatus(StatusCode):
     """Defines a set of status codes for a SalesOrder.
 

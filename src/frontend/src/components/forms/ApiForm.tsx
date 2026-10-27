@@ -264,7 +264,7 @@ export function ApiForm({
         props.pathParams,
         props.queryParams
       ),
-    [props.url, props.pk, props.pathParams]
+    [props.url, props.pk, props.pathParams, props.queryParams]
   );
 
   // Define function to process API response

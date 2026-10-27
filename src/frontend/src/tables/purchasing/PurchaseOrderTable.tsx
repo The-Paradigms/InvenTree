@@ -1,4 +1,5 @@
 import { t } from '@lingui/core/macro';
+import { Badge } from '@mantine/core';
 import { useMemo } from 'react';
 
 import { AddItemButton } from '@lib/components/AddItemButton';
@@ -77,6 +78,42 @@ export function PurchaseOrderTable({
       },
       LineItemsProgressColumn({}),
       StatusColumn({ model: ModelType.purchaseorder }),
+      {
+        accessor: 'approval_status',
+        title: t`Approval`,
+        sortable: true,
+        switchable: true,
+        render: (record: any) => {
+          switch (record.approval_status) {
+            case 'approved':
+              return (
+                <Badge color='teal' size='sm' variant='filled'>
+                  {t`Approved`}
+                </Badge>
+              );
+            case 'rejected':
+              return (
+                <Badge color='red' size='sm' variant='filled'>
+                  {t`Rejected`}
+                </Badge>
+              );
+            case 'pending':
+              return (
+                <Badge color='orange' size='sm' variant='filled'>
+                  {t`Pending`}
+                </Badge>
+              );
+            case 'exempt':
+              return (
+                <Badge color='gray' size='sm' variant='light'>
+                  {t`Exempt`}
+                </Badge>
+              );
+            default:
+              return record.approval_status;
+          }
+        }
+      },
       ProjectCodeColumn({
         defaultVisible: false
       }),

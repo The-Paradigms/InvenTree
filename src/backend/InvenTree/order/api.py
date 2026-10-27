@@ -20,7 +20,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, extend_schema_field
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 import build.models
@@ -60,6 +60,7 @@ from InvenTree.mixins import (
 )
 from order import models, serializers
 from order.status_codes import (
+    PurchaseOrderApprovalStatus,
     PurchaseOrderStatus,
     PurchaseOrderStatusGroups,
     ReturnOrderLineStatus,
@@ -318,7 +319,12 @@ class PurchaseOrderFilter(OrderFilter):
         """Metaclass options."""
 
         model = models.PurchaseOrder
-        fields = ['supplier']
+        fields = ['supplier', 'approval_status']
+
+    approval_status = rest_filters.ChoiceFilter(
+        choices=PurchaseOrderApprovalStatus.CHOICES,
+        label=_('Approval Status'),
+    )
 
     part = rest_filters.ModelChoiceFilter(
         queryset=Part.objects.all(),
@@ -433,6 +439,8 @@ class PurchaseOrderViewSet(
         'total_price',
         'project_code',
         'updated_at',
+        'approval_status',
+        'approval_date',
     ]
 
     ordering = '-reference'
@@ -550,6 +558,71 @@ class PurchaseOrderViewSet(
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(responses={200: serializers.PurchaseOrderSerializer})
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """API endpoint for an Inventory Manager or Admin to approve a PurchaseOrder."""
+        from django.utils import timezone
+
+        order = self.get_order()
+
+        # Authorization: superuser/staff OR in Inventory Manager / Admin group
+        is_admin = request.user.is_superuser or request.user.is_staff
+        user_groups = [g.name.lower() for g in request.user.groups.all()]
+        is_approver = is_admin or any(
+            g in user_groups for g in ['inventory manager', 'inventory managers', 'admin']
+        )
+
+        if not is_approver:
+            raise PermissionDenied(
+                _('Only an Inventory Manager or Admin can approve purchase orders.')
+            )
+
+        if order.status not in [PurchaseOrderStatus.PENDING, PurchaseOrderStatus.ON_HOLD]:
+            raise ValidationError(
+                _('Only pending or on-hold purchase orders can be approved.')
+            )
+
+        order.approval_status = PurchaseOrderApprovalStatus.APPROVED
+        order.approved_by = request.user
+        order.approval_date = timezone.now()
+        order.approval_notes = request.data.get('notes', '')
+        order.save()
+
+        serializer = self.get_serializer(order)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(responses={200: serializers.PurchaseOrderSerializer})
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """API endpoint for an Inventory Manager or Admin to reject a PurchaseOrder."""
+        order = self.get_order()
+
+        # Authorization: superuser/staff OR in Inventory Manager / Admin group
+        is_admin = request.user.is_superuser or request.user.is_staff
+        user_groups = [g.name.lower() for g in request.user.groups.all()]
+        is_approver = is_admin or any(
+            g in user_groups for g in ['inventory manager', 'inventory managers', 'admin']
+        )
+
+        if not is_approver:
+            raise PermissionDenied(
+                _('Only an Inventory Manager or Admin can reject purchase orders.')
+            )
+
+        if order.status not in [PurchaseOrderStatus.PENDING, PurchaseOrderStatus.ON_HOLD]:
+            raise ValidationError(
+                _('Only pending or on-hold purchase orders can be rejected.')
+            )
+
+        order.approval_status = PurchaseOrderApprovalStatus.REJECTED
+        order.status = PurchaseOrderStatus.ON_HOLD
+        order.approval_notes = request.data.get('notes', '')
+        order.save()
+
+        serializer = self.get_serializer(order)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(responses={201: stock_serializers.StockItemSerializer(many=True)})
     @action(
