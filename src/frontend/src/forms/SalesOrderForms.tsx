@@ -19,6 +19,8 @@ import { StandaloneField } from '../components/forms/StandaloneField';
 import { ProgressBar } from '@lib/components/ProgressBar';
 import { apiUrl } from '@lib/functions/Api';
 import { toNumber } from '@lib/functions/Conversion';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../App';
 import type {
   ApiFormAdjustFilterType,
   ApiFormFieldSet,
@@ -276,7 +278,39 @@ export function useCompleteShipmentForm({
 }) {
   const [taskId, setTaskId] = useState<string>('');
 
-  const completeShipmentFields = useSalesOrderShipmentCompleteFields({});
+  const orderId = shipment?.order;
+
+  // Query order data if metadata.invoices is not already available on order_detail
+  const { data: orderData } = useQuery({
+    queryKey: ['sales-order-shipment-invoices', orderId],
+    queryFn: async () => {
+      if (!orderId) return null;
+      const res = await api.get(apiUrl(ApiEndpoints.sales_order_list, orderId));
+      return res.data;
+    },
+    enabled: !!orderId && !shipment?.order_detail?.metadata?.invoices
+  });
+
+  const invoicesList = useMemo(() => {
+    const meta = shipment?.order_detail?.metadata || orderData?.metadata;
+    const list = meta?.invoices || (meta?.invoice ? [meta.invoice] : []);
+    return Array.isArray(list) ? list : [];
+  }, [shipment?.order_detail?.metadata, orderData?.metadata]);
+
+  const defaultInvoiceNumber = useMemo(() => {
+    if (shipment?.invoice_number) {
+      return shipment.invoice_number;
+    }
+    if (invoicesList.length === 1 && invoicesList[0]?.invoice_number) {
+      return invoicesList[0].invoice_number;
+    }
+    return '';
+  }, [shipment?.invoice_number, invoicesList]);
+
+  const completeShipmentFields = useSalesOrderShipmentCompleteFields({
+    shipmentId: shipment?.pk,
+    invoices: invoicesList
+  });
 
   useBackgroundTask({
     taskId: taskId,
@@ -293,7 +327,8 @@ export function useCompleteShipmentForm({
     focus: 'tracking_number',
     initialData: {
       ...shipment,
-      shipment_date: dayjs().format('YYYY-MM-DD')
+      shipment_date: dayjs().format('YYYY-MM-DD'),
+      invoice_number: defaultInvoiceNumber
     },
     successMessage: null,
     onFormSuccess: (response: any) => {
@@ -546,18 +581,37 @@ export function useSalesOrderShipmentFields({
 }
 
 export function useSalesOrderShipmentCompleteFields({
-  shipmentId
+  shipmentId,
+  invoices = []
 }: {
   shipmentId?: number;
+  invoices?: any[];
 }): ApiFormFieldSet {
   return useMemo(() => {
+    const invoiceChoices = invoices.map((inv: any) => {
+      const invNum = inv.invoice_number || inv;
+      const amount = inv.total_amount_due ? ` ($${Number(inv.total_amount_due).toFixed(2)})` : '';
+      const method = inv.ship_method ? ` - ${inv.ship_method}` : '';
+      return {
+        value: invNum,
+        label: `${invNum}${amount}${method}`
+      };
+    });
+
     return {
       shipment_date: {},
       tracking_number: {},
-      invoice_number: {},
+      invoice_number: {
+        placeholder: t`Enter or select invoice number`,
+        description:
+          invoiceChoices.length > 0
+            ? t`Select an invoice from this order or enter an external invoice number`
+            : t`Reference number for associated invoice`,
+        data: invoiceChoices
+      },
       link: {}
     };
-  }, [shipmentId]);
+  }, [shipmentId, invoices]);
 }
 
 export function useSalesOrderAllocationFields({

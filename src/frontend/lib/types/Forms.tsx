@@ -113,6 +113,7 @@ export type ApiFormFieldType = {
   required?: boolean;
   error?: string;
   choices?: ApiFormFieldChoice[];
+  data?: any[];
   hidden?: boolean;
   disabled?: boolean;
   allow_null?: boolean;

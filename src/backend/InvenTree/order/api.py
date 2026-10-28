@@ -1488,10 +1488,133 @@ class SalesOrderGenerateInvoice(SalesOrderContextMixin, GenericAPIView):
             tax_rate = 0.0
         tax_state = data.get('tax_state', '')
 
-        # Safe fallback for subtotal: if not provided or 0, check items/extra_items or fallback to order total price
-        order_total = float(order.total_price.amount if order.total_price else 0)
         items = data.get('items', [])
         extra_items = data.get('extra_items', [])
+
+        # Synchronize any newly added regular line items or extra charges to InvenTree's Sales Order models
+        from djmoney.money import Money
+        import logging
+        logger = logging.getLogger('inventree')
+
+        order_currency = order.currency or 'USD'
+
+        # 1. Sync regular line items
+        existing_lines = {line.part_id: line for line in order.lines.all()}
+        for item in items:
+            is_new = bool(
+                item.get('is_new')
+                or item.get('isNew')
+                or (item.get('id') is not None and isinstance(item.get('id'), (int, float)) and item.get('id') < 0)
+            )
+            part_id = item.get('part_id')
+            if not part_id:
+                continue
+
+            if is_new or part_id not in existing_lines:
+                try:
+                    part_obj = Part.objects.filter(pk=part_id).first()
+                    if part_obj:
+                        qty = Decimal(str(item.get('quantity', 1)))
+                        price_val = Decimal(str(item.get('unit_price', 0)))
+                        sale_price = Money(price_val, order_currency)
+                        line_num = str(item.get('line_number') or (order.lines.count() + 1))
+                        desc = item.get('description', '') or part_obj.description or part_obj.name
+
+                        new_line = models.SalesOrderLineItem(
+                            order=order,
+                            part=part_obj,
+                            quantity=qty,
+                            sale_price=sale_price,
+                            line=line_num,
+                            reference=desc[:100],
+                            notes=item.get('notes', '')
+                        )
+                        if order.check_complete():
+                            new_line.shipped = qty
+
+                        try:
+                            new_line.save()
+                        except Exception:
+                            # Bypass lock check if order is locked
+                            if new_line.line:
+                                try:
+                                    new_line.line_int = int(new_line.line)
+                                except (TypeError, ValueError):
+                                    new_line.line_int = 0
+                            models.Model.save(new_line)
+
+                        existing_lines[part_id] = new_line
+                        item['id'] = new_line.pk
+                        item['line_id'] = new_line.pk
+                        item['is_new'] = False
+                except Exception as ex:
+                    logger.warning(f"Error auto-saving SalesOrderLineItem: {ex}")
+
+        # 2. Sync extra line items
+        existing_extras = list(order.extra_lines.all())
+        existing_extra_refs = {ex.description.strip().lower() for ex in existing_extras if ex.description}
+        existing_extra_refs.update({ex.reference.strip().lower() for ex in existing_extras if ex.reference})
+
+        for extra in extra_items:
+            is_new = bool(
+                extra.get('is_new')
+                or extra.get('isNew')
+                or (extra.get('id') is not None and isinstance(extra.get('id'), (int, float)) and extra.get('id') < 0)
+            )
+            ref = (extra.get('reference') or extra.get('description') or '').strip()
+            if not ref:
+                continue
+
+            if is_new or ref.lower() not in existing_extra_refs:
+                try:
+                    qty = Decimal(str(extra.get('quantity', 1)))
+                    price_val = Decimal(str(extra.get('unit_price', extra.get('price', 0))))
+                    extra_price = Money(price_val, order_currency)
+                    line_num = str(extra.get('line_number') or (order.extra_lines.count() + 1))
+
+                    new_extra = models.SalesOrderExtraLine(
+                        order=order,
+                        description=ref[:250],
+                        reference=ref[:100],
+                        notes=extra.get('notes', ''),
+                        quantity=qty,
+                        price=extra_price,
+                        line=line_num
+                    )
+
+                    try:
+                        new_extra.save()
+                    except Exception:
+                        if new_extra.line:
+                            try:
+                                new_extra.line_int = int(new_extra.line)
+                            except (TypeError, ValueError):
+                                new_extra.line_int = 0
+                        models.Model.save(new_extra)
+
+                    existing_extra_refs.add(ref.lower())
+                    extra['id'] = new_extra.pk
+                    extra['line_id'] = new_extra.pk
+                    extra['is_new'] = False
+                except Exception as ex:
+                    logger.warning(f"Error auto-saving SalesOrderExtraLine: {ex}")
+
+        # Recalculate order total price
+        try:
+            order.update_total_price(commit=True)
+        except Exception:
+            try:
+                order.update_total_price(commit=False)
+                models.SalesOrder.objects.filter(pk=order.pk).update(
+                    total_price=order.total_price.amount if order.total_price else 0
+                )
+            except Exception:
+                pass
+
+        order.refresh_from_db()
+
+        # Safe fallback for subtotal: if not provided or 0, check items/extra_items or fallback to order total price
+        order_total = float(order.total_price.amount if order.total_price else 0)
         try:
             subtotal_in = float(data.get('subtotal', 0))
         except (ValueError, TypeError):

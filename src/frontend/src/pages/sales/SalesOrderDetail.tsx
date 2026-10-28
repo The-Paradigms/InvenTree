@@ -224,17 +224,6 @@ export default function SalesOrderDetail() {
         )
       },
       {
-        name: 'build-orders',
-        label: t`Build Orders`,
-        icon: <IconTools />,
-        hidden: !user.hasViewRole(UserRoles.build),
-        content: order?.pk ? (
-          <BuildOrderTable salesOrderId={order.pk} />
-        ) : (
-          <Skeleton />
-        )
-      },
-      {
         name: 'invoices',
         label: t`Generate Invoice (+)`,
         icon: <IconFileInvoice />,
@@ -247,6 +236,17 @@ export default function SalesOrderDetail() {
             onOpenModal={() => setInvoiceModalOpened(true)}
             refreshOrder={refreshInstance}
           />
+        ) : (
+          <Skeleton />
+        )
+      },
+      {
+        name: 'build-orders',
+        label: t`Build Orders`,
+        icon: <IconTools />,
+        hidden: !user.hasViewRole(UserRoles.build),
+        content: order?.pk ? (
+          <BuildOrderTable salesOrderId={order.pk} />
         ) : (
           <Skeleton />
         )
