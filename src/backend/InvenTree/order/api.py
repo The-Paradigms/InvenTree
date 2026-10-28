@@ -1549,6 +1549,31 @@ class SalesOrderGenerateInvoice(SalesOrderContextMixin, GenericAPIView):
                         item['is_new'] = False
                 except Exception as ex:
                     logger.warning(f"Error auto-saving SalesOrderLineItem: {ex}")
+            elif part_id in existing_lines:
+                try:
+                    existing_line = existing_lines[part_id]
+                    new_price_val = Decimal(str(item.get('unit_price', 0)))
+                    new_qty = Decimal(str(item.get('quantity', 1)))
+                    has_changed = False
+
+                    if (existing_line.sale_price is None or existing_line.sale_price.amount == 0) and new_price_val > 0:
+                        existing_line.sale_price = Money(new_price_val, order_currency)
+                        has_changed = True
+                    elif new_price_val > 0 and existing_line.sale_price and abs(existing_line.sale_price.amount - new_price_val) > Decimal('0.001'):
+                        existing_line.sale_price = Money(new_price_val, order_currency)
+                        has_changed = True
+
+                    if existing_line.quantity != new_qty and new_qty > 0:
+                        existing_line.quantity = new_qty
+                        has_changed = True
+
+                    if has_changed:
+                        try:
+                            existing_line.save()
+                        except Exception:
+                            models.Model.save(existing_line)
+                except Exception as ex:
+                    logger.warning(f"Error updating existing SalesOrderLineItem price/quantity: {ex}")
 
         # 2. Sync extra line items
         existing_extras = list(order.extra_lines.all())

@@ -25,14 +25,10 @@ import {
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
-  IconClipboardList,
-  IconCreditCard,
   IconCube,
-  IconFileAnalytics,
   IconHelpCircle,
   IconLayoutDashboard,
   IconMoonStars,
-  IconPackages,
   IconSettings,
   IconShoppingCart,
   IconSun,
@@ -682,26 +678,6 @@ export function AppSidebar() {
                   collapsed={isCollapsed}
                 />
               )}
-              <SidebarItem
-                icon={<IconCreditCard size={16} />}
-                label={t`Billing`}
-                collapsed={isCollapsed}
-              />
-              <SidebarItem
-                icon={<IconClipboardList size={16} />}
-                label={t`Orders`}
-                collapsed={isCollapsed}
-              />
-              <SidebarItem
-                icon={<IconPackages size={16} />}
-                label={t`Delivery`}
-                collapsed={isCollapsed}
-              />
-              <SidebarItem
-                icon={<IconFileAnalytics size={16} />}
-                label={t`Reports`}
-                collapsed={isCollapsed}
-              />
             </SidebarGroup>
 
           </Stack>

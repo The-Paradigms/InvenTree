@@ -228,7 +228,14 @@ export function GenerateInvoiceModal({
           partDescription: l.part_detail?.description || '',
           units: l.part_detail?.units || 'pcs',
           quantity: Number(l.quantity) || 1,
-          unitPrice: parsePrice(l.sale_price ?? l.price)
+          unitPrice: parsePrice(
+            l.sale_price ??
+              l.price ??
+              l.part_detail?.selling_price ??
+              l.part_detail?.pricing_min ??
+              l.part_detail?.cost ??
+              0
+          )
         }));
 
         // Merge any additional items previously saved in invoice metadata for this order
@@ -251,28 +258,35 @@ export function GenerateInvoiceModal({
         }
         setLineItems(mappedLines);
 
-        // Set extra lines
-        const rawExtras = extraRes.data?.results ?? extraRes.data ?? [];
-        let mappedExtras: InvoiceExtraLineItem[] = rawExtras.map((el: any) => ({
-          id: el.pk,
-          reference: el.reference || el.description || 'Additional Charge',
-          notes: el.notes || '',
-          quantity: Number(el.quantity) || 1,
-          price: parsePrice(el.price ?? el.total_price)
-        }));
-
-        // Load any saved extra charges from metadata if not present in DB
-        if (mappedExtras.length === 0 && Array.isArray(order.metadata?.invoice?.extra_items)) {
-          mappedExtras = order.metadata.invoice.extra_items.map((ex: any, idx: number) => ({
-            id: -(idx + 1),
-            reference: ex.description || 'Additional Charge',
-            notes: ex.notes || '',
-            quantity: Number(ex.quantity) || 1,
-            price: parsePrice(ex.unit_price ?? ex.price ?? ex.total_price),
-            isNew: true
+        // Set extra lines:
+        // Only pre-populate order-level extra lines for the very first invoice (e.g. INV-xxx-1).
+        // For subsequent invoices (INV-xxx-2, INV-xxx-3, etc.), extra charges start empty
+        // so that one-off freight/service charges from previous invoices do not carry over automatically.
+        if (existingInvoices.length === 0) {
+          const rawExtras = extraRes.data?.results ?? extraRes.data ?? [];
+          let mappedExtras: InvoiceExtraLineItem[] = rawExtras.map((el: any) => ({
+            id: el.pk,
+            reference: el.reference || el.description || 'Additional Charge',
+            notes: el.notes || '',
+            quantity: Number(el.quantity) || 1,
+            price: parsePrice(el.price ?? el.total_price)
           }));
+
+          // Load any saved extra charges from metadata if not present in DB
+          if (mappedExtras.length === 0 && Array.isArray(order.metadata?.invoice?.extra_items)) {
+            mappedExtras = order.metadata.invoice.extra_items.map((ex: any, idx: number) => ({
+              id: -(idx + 1),
+              reference: ex.description || 'Additional Charge',
+              notes: ex.notes || '',
+              quantity: Number(ex.quantity) || 1,
+              price: parsePrice(ex.unit_price ?? ex.price ?? ex.total_price),
+              isNew: true
+            }));
+          }
+          setExtraLines(mappedExtras);
+        } else {
+          setExtraLines([]);
         }
-        setExtraLines(mappedExtras);
 
         // Set Tax rates
         const taxes = taxRes.data?.results ?? DEFAULT_STATE_TAX_RATES;
