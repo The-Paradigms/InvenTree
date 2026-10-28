@@ -3358,3 +3358,88 @@ class GenericMetadataAuthorizationTests(InvenTreeAPITestCase):
         self.user.is_staff = True
         self.user.save()
         self.patch(url, {'metadata': {'x': 1}}, expected_code=200)
+
+
+class USStateSalesTaxAPITests(InvenTreeAPITestCase):
+    """API tests for the US State Sales Tax endpoint."""
+
+    roles = 'all'
+
+    def setUp(self):
+        """Setup test data."""
+        super().setUp()
+
+        common.models.USStateSalesTax.objects.update_or_create(
+            state_key='CA',
+            defaults={'state': 'California', 'sales_tax_rate': '7.250'},
+        )
+        common.models.USStateSalesTax.objects.update_or_create(
+            state_key='NY',
+            defaults={'state': 'New York', 'sales_tax_rate': '4.000'},
+        )
+        common.models.USStateSalesTax.objects.update_or_create(
+            state_key='MN',
+            defaults={'state': 'Minnesota', 'sales_tax_rate': '6.875'},
+        )
+
+    def test_list(self):
+        """Test listing states."""
+        url = reverse('api-us-states-sales-tax-list')
+        response = self.get(url, expected_code=200)
+        self.assertEqual(len(response.data), 51)
+
+    def test_detail_by_state_key(self):
+        """Test detail retrieval directly by state_key."""
+        url = reverse('api-us-states-sales-tax-detail', kwargs={'state_key': 'CA'})
+        response = self.get(url, expected_code=200)
+        self.assertEqual(response.data['state_key'], 'CA')
+        self.assertEqual(response.data['state'], 'California')
+        self.assertEqual(response.data['sales_tax_rate'], '7.250')
+        self.assertEqual(response.data['formatted_rate'], '7.250%')
+
+        # Test case-insensitivity
+        url_lower = reverse('api-us-states-sales-tax-detail', kwargs={'state_key': 'ca'})
+        response = self.get(url_lower, expected_code=200)
+        self.assertEqual(response.data['state_key'], 'CA')
+
+    def test_filter_and_search(self):
+        """Test searching and filtering by state_key and state name."""
+        url = reverse('api-us-states-sales-tax-list')
+        response = self.get(url, {'search': 'Minnesota'}, expected_code=200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['state_key'], 'MN')
+        self.assertEqual(response.data[0]['sales_tax_rate'], '6.875')
+
+        # Filter by state_key
+        response = self.get(url, {'state_key': 'NY'}, expected_code=200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['state'], 'New York')
+
+    def test_permissions(self):
+        """Test non-staff cannot create/modify, staff can."""
+        url = reverse('api-us-states-sales-tax-list')
+
+        # Non-staff attempt to create
+        self.user.is_staff = False
+        self.user.save()
+        self.post(
+            url,
+            {'state_key': 'PR', 'state': 'Puerto Rico', 'sales_tax_rate': '10.500'},
+            expected_code=403,
+        )
+
+        # Staff can create
+        self.user.is_staff = True
+        self.user.save()
+        self.post(
+            url,
+            {'state_key': 'PR', 'state': 'Puerto Rico', 'sales_tax_rate': '10.500'},
+            expected_code=201,
+        )
+
+        # Staff can update
+        detail_url = reverse('api-us-states-sales-tax-detail', kwargs={'state_key': 'PR'})
+        self.patch(detail_url, {'sales_tax_rate': '11.500'}, expected_code=200)
+        obj = common.models.USStateSalesTax.objects.get(state_key='PR')
+        self.assertEqual(str(obj.sales_tax_rate), '11.500')
+

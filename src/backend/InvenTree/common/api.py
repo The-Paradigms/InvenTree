@@ -606,6 +606,36 @@ class TagDetail(TagMixin, RetrieveUpdateDestroyAPI):
     """Detail view for a particular tag."""
 
 
+class USStateSalesTaxList(DataExportViewMixin, ListCreateAPI):
+    """List view for all US state sales tax rates."""
+
+    queryset = common.models.USStateSalesTax.objects.all()
+    serializer_class = common.serializers.USStateSalesTaxSerializer
+    permission_classes = [IsStaffOrReadOnlyScope]
+    filter_backends = SEARCH_ORDER_FILTER
+
+    ordering_fields = ['state_key', 'state', 'sales_tax_rate']
+    search_fields = ['state_key', 'state']
+    filterset_fields = ['state_key']
+
+
+class USStateSalesTaxDetail(RetrieveUpdateDestroyAPI):
+    """Detail view for a particular US state sales tax rate."""
+
+    queryset = common.models.USStateSalesTax.objects.all()
+    serializer_class = common.serializers.USStateSalesTaxSerializer
+    permission_classes = [IsStaffOrReadOnlyScope]
+    lookup_field = 'state_key'
+    lookup_url_kwarg = 'state_key'
+
+    def get_object(self):
+        """Lookup by state_key case-insensitively."""
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        if lookup_url_kwarg in self.kwargs:
+            self.kwargs[lookup_url_kwarg] = self.kwargs[lookup_url_kwarg].upper()
+        return super().get_object()
+
+
 class CustomUnitViewset(DataExportViewMixin, viewsets.ModelViewSet):
     """List view for custom units."""
 
@@ -2107,6 +2137,22 @@ common_api_urls = [
                 ]),
             ),
             path('', ProjectCodeList.as_view(), name='api-project-code-list'),
+        ]),
+    ),
+    # US State Sales Tax
+    path(
+        'us-states-sales-tax/',
+        include([
+            path(
+                '<str:state_key>/',
+                USStateSalesTaxDetail.as_view(),
+                name='api-us-states-sales-tax-detail',
+            ),
+            path(
+                '',
+                USStateSalesTaxList.as_view(),
+                name='api-us-states-sales-tax-list',
+            ),
         ]),
     ),
     # Tags (via django-taggit)

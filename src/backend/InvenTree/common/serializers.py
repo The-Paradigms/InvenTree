@@ -539,6 +539,29 @@ class CustomUnitSerializer(DataImportExportSerializerMixin, InvenTreeModelSerial
         fields = ['pk', 'name', 'symbol', 'definition']
 
 
+@register_importer()
+class USStateSalesTaxSerializer(DataImportExportSerializerMixin, InvenTreeModelSerializer):
+    """Serializer for the USStateSalesTax model."""
+
+    class Meta:
+        """Meta options for USStateSalesTaxSerializer."""
+
+        model = common_models.USStateSalesTax
+        fields = [
+            'pk',
+            'state_key',
+            'state',
+            'sales_tax_rate',
+            'rate_multiplier',
+            'formatted_rate',
+        ]
+
+    rate_multiplier = serializers.DecimalField(
+        max_digits=8, decimal_places=5, read_only=True
+    )
+    formatted_rate = serializers.CharField(read_only=True)
+
+
 class AllUnitListResponseSerializer(serializers.Serializer):
     """Serializer for the AllUnitList."""
 

@@ -146,6 +146,15 @@ class ProjectCodeAdmin(admin.ModelAdmin):
     search_fields = ('code', 'description')
 
 
+@admin.register(common.models.USStateSalesTax)
+class USStateSalesTaxAdmin(admin.ModelAdmin):
+    """Admin settings for USStateSalesTax."""
+
+    list_display = ('state_key', 'state', 'sales_tax_rate')
+    search_fields = ('state_key', 'state')
+    ordering = ('state',)
+
+
 @admin.register(common.models.InvenTreeSetting)
 class SettingsAdmin(admin.ModelAdmin):
     """Admin settings for InvenTreeSetting."""

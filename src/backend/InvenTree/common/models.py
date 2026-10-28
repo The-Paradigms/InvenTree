@@ -14,6 +14,7 @@ import re
 import uuid
 from collections import OrderedDict
 from datetime import timedelta, timezone
+from decimal import Decimal
 from email.utils import make_msgid
 from enum import Enum
 from io import BytesIO
@@ -34,7 +35,11 @@ from django.core.files.storage import default_storage
 from django.core.files.utils import validate_file_name
 from django.core.mail import EmailMultiAlternatives, get_connection
 from django.core.mail.utils import DNS_NAME
-from django.core.validators import MinLengthValidator, MinValueValidator
+from django.core.validators import (
+    MaxValueValidator,
+    MinLengthValidator,
+    MinValueValidator,
+)
 from django.db import models, transaction
 from django.db.models import enums
 from django.db.models.signals import post_delete, post_save
@@ -1907,6 +1912,80 @@ def after_custom_unit_updated(sender, instance, **kwargs):
     from InvenTree.conversion import reload_unit_registry
 
     reload_unit_registry()
+
+
+class USStateSalesTax(models.Model):
+    """Model representing U.S. state sales tax rates.
+
+    Attributes:
+        id: AutoField primary key
+        state_key: Two-letter US state code (e.g. 'AL', 'CA')
+        state: Full name of the US state (e.g. 'Alabama', 'California')
+        sales_tax_rate: State sales tax rate percentage with 3 decimal places (e.g. 7.250)
+    """
+
+    class Meta:
+        """Class options for USStateSalesTax model."""
+
+        db_table = 'us_states_sales_tax'
+        verbose_name = _('US State Sales Tax')
+        verbose_name_plural = _('US States Sales Tax')
+        ordering = ['state']
+
+    @staticmethod
+    def get_api_url():
+        """Return the API URL for this model."""
+        return reverse('api-us-states-sales-tax-list')
+
+    def __str__(self):
+        """String representation of a state sales tax record."""
+        return f'{self.state} ({self.state_key}): {self.sales_tax_rate}%'
+
+    def clean(self):
+        """Clean and normalize fields."""
+        super().clean()
+        if self.state_key:
+            self.state_key = self.state_key.strip().upper()
+        if self.state:
+            self.state = self.state.strip()
+
+    id = models.AutoField(
+        primary_key=True,
+    )
+
+    state_key = models.CharField(
+        max_length=2,
+        unique=True,
+        validators=[MinLengthValidator(2)],
+        verbose_name=_('State Key'),
+        help_text=_('Two-letter US state code'),
+    )
+
+    state = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name=_('State'),
+        help_text=_('US state name'),
+    )
+
+    sales_tax_rate = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        default=Decimal('0.000'),
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name=_('Sales Tax Rate'),
+        help_text=_('State sales tax rate as a percentage'),
+    )
+
+    @property
+    def rate_multiplier(self) -> Decimal:
+        """Return the tax rate as a decimal factor (e.g., 0.04 for 4%)."""
+        return self.sales_tax_rate / Decimal('100')
+
+    @property
+    def formatted_rate(self) -> str:
+        """Return formatted rate string."""
+        return f'{self.sales_tax_rate}%'
 
 
 def rename_attachment(instance, filename: str):
