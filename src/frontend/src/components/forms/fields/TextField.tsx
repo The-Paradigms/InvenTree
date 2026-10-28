@@ -1,4 +1,4 @@
-import { TextInput } from '@mantine/core';
+import { Autocomplete, TextInput } from '@mantine/core';
 import { memo, useCallback, useEffect, useId, useMemo, useState } from 'react';
 import type { FieldValues, UseControllerReturn } from 'react-hook-form';
 import AutoFillRightSection from './AutoFillRightSection';
@@ -51,9 +51,45 @@ function TextField({
   const fieldDefinition = useMemo(() => {
     return {
       ...definition,
-      allow_blank: undefined
+      allow_blank: undefined,
+      data: undefined
     };
   }, [definition]);
+
+  if (definition.data && Array.isArray(definition.data) && definition.data.length > 0) {
+    return (
+      <Autocomplete
+        {...fieldDefinition}
+        ref={field.ref}
+        id={fieldId}
+        aria-label={`text-field-${field.name}`}
+        data={definition.data}
+        value={textValue || ''}
+        error={definition.error ?? error?.message}
+        radius='sm'
+        comboboxProps={{ withinPortal: true }}
+        maxDropdownHeight={220}
+        onChange={(val) => onTextChange(val)}
+        onOptionSubmit={(val) => onTextChange(val)}
+        onKeyDown={(event) => {
+          if (event.code === 'Enter') {
+            onTextChange(event.currentTarget.value);
+          }
+          onKeyDown(event.code);
+        }}
+        rightSection={
+          placeholderAutofill && (
+            <AutoFillRightSection
+              value={textValue}
+              fieldName={field.name}
+              definition={definition}
+              onChange={onChange}
+            />
+          )
+        }
+      />
+    );
+  }
 
   return (
     <TextInput

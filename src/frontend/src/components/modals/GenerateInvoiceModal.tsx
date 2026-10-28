@@ -33,6 +33,7 @@ import {
   IconTruckDelivery
 } from '@tabler/icons-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { ApiEndpoints } from '@lib/enums/ApiEndpoints';
 import { apiUrl } from '@lib/functions/Api';
@@ -123,6 +124,7 @@ export function GenerateInvoiceModal({
   order,
   onInvoiceGenerated
 }: Readonly<GenerateInvoiceModalProps>) {
+  const queryClient = useQueryClient();
   const [loadingData, setLoadingData] = useState<boolean>(false);
   const [generating, setGenerating] = useState<boolean>(false);
 
@@ -413,38 +415,7 @@ export function GenerateInvoiceModal({
     setGenerating(true);
 
     try {
-      // 1. Create any newly added regular line items
-      const newItems = lineItems.filter((l) => l.isNew);
-      for (const item of newItems) {
-        try {
-          await api.post(apiUrl(ApiEndpoints.sales_order_line_list), {
-            order: order.pk,
-            part: item.partId,
-            quantity: item.quantity,
-            sale_price: item.unitPrice,
-            price: item.unitPrice
-          });
-        } catch (postErr) {
-          console.warn('Could not add new line item to order:', postErr);
-        }
-      }
-
-      // 2. Create any newly added extra line items
-      const newExtras = extraLines.filter((el) => el.isNew);
-      for (const extra of newExtras) {
-        try {
-          await api.post(apiUrl(ApiEndpoints.sales_order_extra_line_list), {
-            order: order.pk,
-            reference: extra.reference,
-            quantity: extra.quantity,
-            price: extra.price
-          });
-        } catch (extraErr) {
-          console.warn('Could not add extra line item to order:', extraErr);
-        }
-      }
-
-      // 3. Generate invoice via endpoint
+      // Generate invoice via endpoint (backend atomically creates any newly added lines and extra lines)
       const invoicePayload = {
         invoice_number: invoiceNumber || order.reference,
         ship_method: shipMethod,
@@ -455,6 +426,7 @@ export function GenerateInvoiceModal({
         total_amount_due: totalAmountDue,
         items: lineItems.map((item, idx) => ({
           line_number: idx + 1,
+          id: item.id,
           part_id: item.partId,
           part_name: item.partName,
           part_ipn: item.partIPN || '',
@@ -462,15 +434,20 @@ export function GenerateInvoiceModal({
           units: item.units || 'pcs',
           quantity: item.quantity,
           unit_price: item.unitPrice,
-          total_price: Number(((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2))
+          total_price: Number(((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2)),
+          is_new: Boolean(item.isNew)
         })),
         extra_items: extraLines.map((extra, idx) => ({
           line_number: idx + 1,
+          id: extra.id,
           description: extra.reference || 'Additional Charge',
+          reference: extra.reference || 'Additional Charge',
           notes: extra.notes || '',
           quantity: extra.quantity,
           unit_price: extra.price,
-          total_price: Number(((extra.quantity || 0) * (extra.price || 0)).toFixed(2))
+          price: extra.price,
+          total_price: Number(((extra.quantity || 0) * (extra.price || 0)).toFixed(2)),
+          is_new: Boolean(extra.isNew)
         }))
       };
 
@@ -479,6 +456,9 @@ export function GenerateInvoiceModal({
         invoicePayload
       );
 
+      // Invalidate all table data queries so Line Items and Extra Line Items tables immediately reload
+      queryClient.invalidateQueries({ queryKey: ['tabledata'] });
+
       showNotification({
         title: t`Invoice Generated`,
         message: t`Invoice ${invoicePayload.invoice_number} created successfully`,
@@ -486,7 +466,7 @@ export function GenerateInvoiceModal({
         icon: <IconCheck size={18} />
       });
 
-      // 4. Open generated invoice preview in a new window/tab
+      // Open generated invoice preview in a new window/tab
       if (res.data?.output_url) {
         window.open(res.data.output_url, '_blank');
       }
@@ -522,7 +502,8 @@ export function GenerateInvoiceModal({
     subtotal,
     totalAmountDue,
     onInvoiceGenerated,
-    onClose
+    onClose,
+    queryClient
   ]);
 
   return (
