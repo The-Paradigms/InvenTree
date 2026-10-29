@@ -1387,68 +1387,6 @@ class SalesOrderAutoAllocate(SalesOrderContextMixin, CreateAPI):
         return Response(response, status=response['http_status'])
 
 
-class StateTaxRatesView(GenericAPIView):
-    """API endpoint to get available state sales tax rates."""
-
-    permission_classes = [InvenTree.permissions.IsAuthenticatedOrReadScope]
-
-    def get(self, request, *args, **kwargs):
-        tax_rates = [
-            {'state': 'None / Tax Exempt', 'code': 'EXEMPT', 'rate': 0.0},
-            {'state': 'Virginia', 'code': 'VA', 'rate': 5.3},
-            {'state': 'California', 'code': 'CA', 'rate': 7.25},
-            {'state': 'Texas', 'code': 'TX', 'rate': 6.25},
-            {'state': 'New York', 'code': 'NY', 'rate': 4.0},
-            {'state': 'Florida', 'code': 'FL', 'rate': 6.0},
-            {'state': 'Ohio', 'code': 'OH', 'rate': 5.75},
-            {'state': 'Pennsylvania', 'code': 'PA', 'rate': 6.0},
-            {'state': 'Illinois', 'code': 'IL', 'rate': 6.25},
-            {'state': 'North Carolina', 'code': 'NC', 'rate': 4.75},
-            {'state': 'Georgia', 'code': 'GA', 'rate': 4.0},
-            {'state': 'Michigan', 'code': 'MI', 'rate': 6.0},
-            {'state': 'New Jersey', 'code': 'NJ', 'rate': 6.625},
-            {'state': 'Washington', 'code': 'WA', 'rate': 6.5},
-            {'state': 'Arizona', 'code': 'AZ', 'rate': 5.6},
-            {'state': 'Massachusetts', 'code': 'MA', 'rate': 6.25},
-            {'state': 'Tennessee', 'code': 'TN', 'rate': 7.0},
-            {'state': 'Indiana', 'code': 'IN', 'rate': 7.0},
-            {'state': 'Maryland', 'code': 'MD', 'rate': 6.0},
-            {'state': 'Wisconsin', 'code': 'WI', 'rate': 5.0},
-            {'state': 'Colorado', 'code': 'CO', 'rate': 2.9},
-            {'state': 'Minnesota', 'code': 'MN', 'rate': 6.875},
-            {'state': 'South Carolina', 'code': 'SC', 'rate': 6.0},
-            {'state': 'Alabama', 'code': 'AL', 'rate': 4.0},
-            {'state': 'Louisiana', 'code': 'LA', 'rate': 4.45},
-            {'state': 'Kentucky', 'code': 'KY', 'rate': 6.0},
-            {'state': 'Oregon', 'code': 'OR', 'rate': 0.0},
-            {'state': 'Oklahoma', 'code': 'OK', 'rate': 4.5},
-            {'state': 'Connecticut', 'code': 'CT', 'rate': 6.35},
-            {'state': 'Utah', 'code': 'UT', 'rate': 6.1},
-            {'state': 'Iowa', 'code': 'IA', 'rate': 6.0},
-            {'state': 'Nevada', 'code': 'NV', 'rate': 6.85},
-            {'state': 'Arkansas', 'code': 'AR', 'rate': 6.5},
-            {'state': 'Mississippi', 'code': 'MS', 'rate': 7.0},
-            {'state': 'Kansas', 'code': 'KS', 'rate': 6.5},
-            {'state': 'New Mexico', 'code': 'NM', 'rate': 5.0},
-            {'state': 'Nebraska', 'code': 'NE', 'rate': 5.5},
-            {'state': 'Idaho', 'code': 'ID', 'rate': 6.0},
-            {'state': 'West Virginia', 'code': 'WV', 'rate': 6.0},
-            {'state': 'Hawaii', 'code': 'HI', 'rate': 4.0},
-            {'state': 'New Hampshire', 'code': 'NH', 'rate': 0.0},
-            {'state': 'Maine', 'code': 'ME', 'rate': 5.5},
-            {'state': 'Montana', 'code': 'MT', 'rate': 0.0},
-            {'state': 'Rhode Island', 'code': 'RI', 'rate': 7.0},
-            {'state': 'Delaware', 'code': 'DE', 'rate': 0.0},
-            {'state': 'South Dakota', 'code': 'SD', 'rate': 4.2},
-            {'state': 'North Dakota', 'code': 'ND', 'rate': 5.0},
-            {'state': 'Alaska', 'code': 'AK', 'rate': 0.0},
-            {'state': 'District of Columbia', 'code': 'DC', 'rate': 6.0},
-            {'state': 'Vermont', 'code': 'VT', 'rate': 6.0},
-            {'state': 'Wyoming', 'code': 'WY', 'rate': 4.0},
-        ]
-        return Response({'results': tax_rates})
-
-
 class ShippingMethodsView(GenericAPIView):
     """API endpoint to get available shipping methods."""
 
@@ -3324,8 +3262,7 @@ order_api_urls = [
                     path('', SalesOrderDetail.as_view(), name='api-so-detail'),
                 ]),
             ),
-            # Tax rates and shipping methods
-            path('tax-rates/', StateTaxRatesView.as_view(), name='api-so-tax-rates'),
+            # Shipping methods
             path(
                 'shipping-methods/',
                 ShippingMethodsView.as_view(),

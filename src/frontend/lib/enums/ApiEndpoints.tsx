@@ -273,6 +273,9 @@ export enum ApiEndpoints {
   parameter_template_list = 'parameter/template/',
   tag_list = 'tag/',
 
+  // US States Sales Tax
+  us_states_sales_tax_list = 'us-states-sales-tax/',
+
   // Internal system things
   system_internal_trace_end = 'system-internal/observability/end'
 }
