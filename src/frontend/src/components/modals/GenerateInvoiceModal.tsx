@@ -67,31 +67,60 @@ interface InvoiceExtraLineItem {
   isNew?: boolean;
 }
 
-// Built-in fallback US state tax rates
+// Built-in fallback US state tax rates (used if API is unavailable)
 const DEFAULT_STATE_TAX_RATES = [
   { state: 'None / Tax Exempt', code: 'EXEMPT', rate: 0.0 },
-  { state: 'Virginia', code: 'VA', rate: 5.3 },
-  { state: 'California', code: 'CA', rate: 7.25 },
-  { state: 'Texas', code: 'TX', rate: 6.25 },
-  { state: 'New York', code: 'NY', rate: 4.0 },
-  { state: 'Florida', code: 'FL', rate: 6.0 },
-  { state: 'Ohio', code: 'OH', rate: 5.75 },
-  { state: 'Pennsylvania', code: 'PA', rate: 6.0 },
-  { state: 'Illinois', code: 'IL', rate: 6.25 },
-  { state: 'North Carolina', code: 'NC', rate: 4.75 },
-  { state: 'Georgia', code: 'GA', rate: 4.0 },
-  { state: 'Michigan', code: 'MI', rate: 6.0 },
-  { state: 'New Jersey', code: 'NJ', rate: 6.625 },
-  { state: 'Washington', code: 'WA', rate: 6.5 },
+  { state: 'Alabama', code: 'AL', rate: 4.0 },
+  { state: 'Alaska', code: 'AK', rate: 0.0 },
   { state: 'Arizona', code: 'AZ', rate: 5.6 },
-  { state: 'Massachusetts', code: 'MA', rate: 6.25 },
-  { state: 'Tennessee', code: 'TN', rate: 7.0 },
-  { state: 'Indiana', code: 'IN', rate: 7.0 },
-  { state: 'Maryland', code: 'MD', rate: 6.0 },
-  { state: 'Wisconsin', code: 'WI', rate: 5.0 },
+  { state: 'Arkansas', code: 'AR', rate: 6.5 },
+  { state: 'California', code: 'CA', rate: 7.25 },
   { state: 'Colorado', code: 'CO', rate: 2.9 },
+  { state: 'Connecticut', code: 'CT', rate: 6.35 },
+  { state: 'Delaware', code: 'DE', rate: 0.0 },
+  { state: 'District of Columbia', code: 'DC', rate: 6.0 },
+  { state: 'Florida', code: 'FL', rate: 6.0 },
+  { state: 'Georgia', code: 'GA', rate: 4.0 },
+  { state: 'Hawaii', code: 'HI', rate: 4.0 },
+  { state: 'Idaho', code: 'ID', rate: 6.0 },
+  { state: 'Illinois', code: 'IL', rate: 6.25 },
+  { state: 'Indiana', code: 'IN', rate: 7.0 },
+  { state: 'Iowa', code: 'IA', rate: 6.0 },
+  { state: 'Kansas', code: 'KS', rate: 6.5 },
+  { state: 'Kentucky', code: 'KY', rate: 6.0 },
+  { state: 'Louisiana', code: 'LA', rate: 4.45 },
+  { state: 'Maine', code: 'ME', rate: 5.5 },
+  { state: 'Maryland', code: 'MD', rate: 6.0 },
+  { state: 'Massachusetts', code: 'MA', rate: 6.25 },
+  { state: 'Michigan', code: 'MI', rate: 6.0 },
   { state: 'Minnesota', code: 'MN', rate: 6.875 },
-  { state: 'South Carolina', code: 'SC', rate: 6.0 }
+  { state: 'Mississippi', code: 'MS', rate: 7.0 },
+  { state: 'Missouri', code: 'MO', rate: 4.225 },
+  { state: 'Montana', code: 'MT', rate: 0.0 },
+  { state: 'Nebraska', code: 'NE', rate: 5.5 },
+  { state: 'Nevada', code: 'NV', rate: 6.85 },
+  { state: 'New Hampshire', code: 'NH', rate: 0.0 },
+  { state: 'New Jersey', code: 'NJ', rate: 6.625 },
+  { state: 'New Mexico', code: 'NM', rate: 5.125 },
+  { state: 'New York', code: 'NY', rate: 4.0 },
+  { state: 'North Carolina', code: 'NC', rate: 4.75 },
+  { state: 'North Dakota', code: 'ND', rate: 5.0 },
+  { state: 'Ohio', code: 'OH', rate: 5.75 },
+  { state: 'Oklahoma', code: 'OK', rate: 4.5 },
+  { state: 'Oregon', code: 'OR', rate: 0.0 },
+  { state: 'Pennsylvania', code: 'PA', rate: 6.0 },
+  { state: 'Rhode Island', code: 'RI', rate: 7.0 },
+  { state: 'South Carolina', code: 'SC', rate: 6.0 },
+  { state: 'South Dakota', code: 'SD', rate: 4.2 },
+  { state: 'Tennessee', code: 'TN', rate: 7.0 },
+  { state: 'Texas', code: 'TX', rate: 6.25 },
+  { state: 'Utah', code: 'UT', rate: 4.85 },
+  { state: 'Vermont', code: 'VT', rate: 6.0 },
+  { state: 'Virginia', code: 'VA', rate: 5.3 },
+  { state: 'Washington', code: 'WA', rate: 6.5 },
+  { state: 'West Virginia', code: 'WV', rate: 6.0 },
+  { state: 'Wisconsin', code: 'WI', rate: 5.0 },
+  { state: 'Wyoming', code: 'WY', rate: 4.0 }
 ];
 
 const DEFAULT_SHIPPING_METHODS = [
@@ -206,8 +235,14 @@ export function GenerateInvoiceModal({
         })
         .catch(() => ({ data: { results: [] } })),
       api
-        .get('/api/order/so/tax-rates/')
-        .catch(() => ({ data: { results: DEFAULT_STATE_TAX_RATES } })),
+        .get(apiUrl(ApiEndpoints.us_states_sales_tax_list), {
+          params: { ordering: 'state' }
+        })
+        .catch(() =>
+          api
+            .get('/api/us-states-sales-tax/', { params: { ordering: 'state' } })
+            .catch(() => ({ data: DEFAULT_STATE_TAX_RATES }))
+        ),
       api
         .get('/api/order/so/shipping-methods/')
         .catch(() => ({ data: { results: DEFAULT_SHIPPING_METHODS } })),
@@ -288,10 +323,70 @@ export function GenerateInvoiceModal({
           setExtraLines([]);
         }
 
-        // Set Tax rates
-        const taxes = taxRes.data?.results ?? DEFAULT_STATE_TAX_RATES;
-        if (Array.isArray(taxes) && taxes.length > 0) {
-          setTaxRateOptions(taxes);
+        // Set Tax rates dynamically from U.S. States Sales Tax API
+        const rawTaxes = Array.isArray(taxRes.data)
+          ? taxRes.data
+          : Array.isArray(taxRes.data?.results)
+          ? taxRes.data.results
+          : [];
+
+        let mappedTaxes: { state: string; code: string; rate: number }[] = [];
+
+        if (rawTaxes.length > 0) {
+          mappedTaxes = [
+            { state: 'None / Tax Exempt', code: 'EXEMPT', rate: 0.0 },
+            ...rawTaxes.map((t: any) => {
+              const rateVal =
+                t.rate !== undefined
+                  ? Number(t.rate)
+                  : t.sales_tax_rate !== undefined
+                  ? parseFloat(t.sales_tax_rate)
+                  : 0;
+              return {
+                state: t.state || '',
+                code: t.state_key || t.code || '',
+                rate: isNaN(rateVal) ? 0 : Number(rateVal.toFixed(3))
+              };
+            })
+          ];
+          setTaxRateOptions(mappedTaxes);
+        } else {
+          mappedTaxes = DEFAULT_STATE_TAX_RATES;
+          setTaxRateOptions(DEFAULT_STATE_TAX_RATES);
+        }
+
+        // Synchronize tax state & rate with existing invoice metadata or customer status
+        const existingTaxState = order.metadata?.invoice?.tax_state;
+        const existingTaxRate = order.metadata?.invoice?.tax_rate;
+
+        if (existingTaxState) {
+          const match = mappedTaxes.find(
+            (t) =>
+              t.state.toLowerCase() === existingTaxState.toLowerCase() ||
+              t.code.toLowerCase() === existingTaxState.toLowerCase()
+          );
+          if (match) {
+            setTaxState(match.state);
+            setTaxRate(existingTaxRate !== undefined ? Number(existingTaxRate) : match.rate);
+          } else {
+            setTaxState(existingTaxState);
+            if (existingTaxRate !== undefined) {
+              setTaxRate(Number(existingTaxRate));
+            }
+          }
+        } else if (order.customer_detail?.is_taxable === false) {
+          setTaxState('None / Tax Exempt');
+          setTaxRate(0.0);
+        } else {
+          const defaultMatch = mappedTaxes.find(
+            (t) =>
+              t.state.toLowerCase() === taxState.toLowerCase() ||
+              t.code.toLowerCase() === taxState.toLowerCase()
+          );
+          if (defaultMatch) {
+            setTaxState(defaultMatch.state);
+            setTaxRate(defaultMatch.rate);
+          }
         }
 
         // Set shipping methods
@@ -313,10 +408,16 @@ export function GenerateInvoiceModal({
   const handleTaxSelection = useCallback(
     (selectedStateName: string | null) => {
       if (!selectedStateName) return;
-      const found = taxRateOptions.find((t) => t.state === selectedStateName);
+      const found = taxRateOptions.find(
+        (t) =>
+          t.state.toLowerCase() === selectedStateName.toLowerCase() ||
+          t.code.toLowerCase() === selectedStateName.toLowerCase()
+      );
       if (found) {
         setTaxState(found.state);
         setTaxRate(found.rate);
+      } else {
+        setTaxState(selectedStateName);
       }
     },
     [taxRateOptions]
@@ -606,19 +707,18 @@ export function GenerateInvoiceModal({
                   description={t`State rate applied to subtotal`}
                   data={taxRateOptions.map((opt) => ({
                     value: opt.state,
-                    label: `${opt.state} (${opt.rate}%)`
+                    label:
+                      opt.code && opt.code !== 'EXEMPT'
+                        ? `${opt.state} (${opt.code}) - ${opt.rate}%`
+                        : `${opt.state} (${opt.rate}%)`
                   }))}
                   value={taxState}
                   onChange={handleTaxSelection}
                   leftSection={<IconReceiptTax size={16} />}
+                  searchable
+                  clearable={false}
                   required
                 />
-                <Group gap='xs' mt={4}>
-                  <Text size='xs' c='dimmed'>{t`Selected Tax Rate:`}</Text>
-                  <Badge size='sm' variant='filled' color='blue'>
-                    {taxRate}%
-                  </Badge>
-                </Group>
               </Grid.Col>
             </Grid>
 
