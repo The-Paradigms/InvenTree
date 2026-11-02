@@ -17,6 +17,7 @@ import {
   IconMail,
   IconNotes,
   IconPackages,
+  IconPercentage,
   IconPhoto,
   IconPlugConnected,
   IconQrcode,
@@ -100,6 +101,10 @@ const ProjectCodeTable = Loadable(
   lazy(() => import('../../../../tables/settings/ProjectCodeTable'))
 );
 
+const DiscountTierTable = Loadable(
+  lazy(() => import('../../../../tables/settings/DiscountTierTable'))
+);
+
 const CustomStateTable = Loadable(
   lazy(() => import('../../../../tables/settings/CustomStateTable'))
 );
@@ -181,6 +186,13 @@ export default function AdminCenter() {
         label: t`Currencies`,
         icon: <IconCoins />,
         content: <CurrencyManagementPanel />
+      },
+      {
+        name: 'discount-tiers',
+        label: t`Discount Tiers`,
+        icon: <IconPercentage />,
+        content: <DiscountTierTable />,
+        hidden: !user.isStaff()
       },
       {
         name: 'project-codes',

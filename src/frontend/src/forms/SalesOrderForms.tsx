@@ -10,6 +10,7 @@ import {
   IconUsers
 } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useDiscountTierChoices } from '../hooks/UseDiscountTiers';
 
 import { ApiEndpoints } from '@lib/enums/ApiEndpoints';
 import { ModelType } from '@lib/enums/ModelType';
@@ -130,10 +131,13 @@ export function useSalesOrderLineItemFields({
   create?: boolean;
   currency?: string;
 }): ApiFormFieldSet {
+  const user = useUserState();
+  const isAuthorised = user.isStaff() || user.isSuperuser();
   const [salePrice, setSalePrice] = useState<string | undefined>(undefined);
   const [partCurrency, setPartCurrency] = useState<string>(currency ?? '');
   const [part, setPart] = useState<any>({});
   const [quantity, setQuantity] = useState<string>('1');
+  const { choices: discountTierChoices } = useDiscountTierChoices();
 
   // Update suggested sale price when part, quantity, or part currency changes
   useEffect(() => {
@@ -191,16 +195,27 @@ export function useSalesOrderLineItemFields({
       },
       sale_price: {
         placeholder: salePrice,
-        placeholderAutofill: true,
+        placeholderAutofill: isAuthorised,
         placeholderWarningCompare: salePrice,
-        placeholderWarning: t`Price based on part and quantity differs${salePrice ? `; suggested: (${salePrice})` : '.'}`
+        placeholderWarning: t`Price based on part and quantity differs${salePrice ? `; suggested: (${salePrice})` : '.'}`,
+        disabled: !isAuthorised,
+        value: !isAuthorised && create && salePrice !== undefined ? salePrice : undefined,
+        description: !isAuthorised
+          ? t`Selling price is locked. Only authorised staff can override.`
+          : undefined
       },
       sale_price_currency: {
         icon: <IconCoins />,
         value: partCurrency,
+        disabled: !isAuthorised,
         onValueChange: setPartCurrency
       },
-      discount: {},
+      discount: {
+        field_type: 'choice',
+        label: t`Discount Tier`,
+        description: t`Select a permitted discount tier`,
+        choices: discountTierChoices
+      },
       project_code: ProjectCodeField(),
       target_date: {},
       notes: {},
@@ -208,7 +223,7 @@ export function useSalesOrderLineItemFields({
     };
 
     return fields;
-  }, [salePrice, partCurrency, orderId, create]);
+  }, [salePrice, partCurrency, orderId, create, discountTierChoices, isAuthorised]);
 }
 
 export function useCheckShipmentForm({

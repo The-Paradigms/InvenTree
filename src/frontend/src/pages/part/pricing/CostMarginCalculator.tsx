@@ -31,7 +31,7 @@ import {
   IconSparkles,
   IconTrendingUp
 } from '@tabler/icons-react';
-import type { UseQueryResult } from '@tanstack/react-query';
+import { useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ApiEndpoints } from '@lib/enums/ApiEndpoints';
@@ -51,6 +51,7 @@ export default function CostMarginCalculator({
   pricing,
   pricingQuery
 }: Readonly<CostMarginCalculatorProps>) {
+  const queryClient = useQueryClient();
   const globalSettings = useGlobalSettingsState();
   const defaultCurrency =
     globalSettings.getSetting('INVENTREE_DEFAULT_CURRENCY') ?? 'USD';
@@ -105,8 +106,8 @@ export default function CostMarginCalculator({
 
   // Initial minimum price discovery
   const initialMinimumPrice = useMemo(() => {
-    if (part?.minimum_price != null) return Number(part.minimum_price);
-    if (part?.metadata?.minimum_price != null)
+    if (part?.minimum_price != null && part.minimum_price !== '') return Number(part.minimum_price);
+    if (part?.metadata?.minimum_price != null && part.metadata.minimum_price !== '')
       return Number(part.metadata.minimum_price);
     return '';
   }, [part]);
@@ -354,9 +355,12 @@ export default function CostMarginCalculator({
         color: 'green',
         icon: <IconCircleCheck />,
         title: t`Pricing Saved`,
-        message: t`Cost, margin, and selling price have been saved successfully.`
+        message: t`Cost, margin, selling price, and minimum price floor have been saved successfully.`
       });
 
+      queryClient.invalidateQueries({
+        queryKey: ['instance', ApiEndpoints.part_list]
+      });
       pricingQuery?.refetch();
     } catch (err: any) {
       notifications.show({
@@ -371,7 +375,7 @@ export default function CostMarginCalculator({
     } finally {
       setSaving(false);
     }
-  }, [cost, margin, sellingPrice, currency, part, pricingQuery]);
+  }, [cost, margin, sellingPrice, minPrice, currency, part, pricingQuery, queryClient]);
 
   return (
     <Card

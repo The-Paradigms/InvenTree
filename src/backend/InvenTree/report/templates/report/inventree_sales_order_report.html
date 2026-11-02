@@ -666,13 +666,14 @@ body {
 <table class="inv-items-table">
     <thead>
         <tr>
-            <th class="text-left" style="width: 44%; vertical-align: bottom;">
+            <th class="text-left" style="width: 38%; vertical-align: bottom;">
                 Item ID<br>
                 <span class="sub-head">Item Description</span>
             </th>
-            <th class="sub-head text-center" style="width: 10%; vertical-align: bottom;">Unit</th>
-            <th class="sub-head text-right" style="width: 16%; vertical-align: bottom;">Ordered Quantity</th>
-            <th class="sub-head text-right" style="width: 15%; vertical-align: bottom;">Unit Price</th>
+            <th class="sub-head text-center" style="width: 8%; vertical-align: bottom;">Unit</th>
+            <th class="sub-head text-right" style="width: 14%; vertical-align: bottom;">Ordered Quantity</th>
+            <th class="sub-head text-right" style="width: 13%; vertical-align: bottom;">Unit Price</th>
+            <th class="sub-head text-center" style="width: 12%; vertical-align: bottom;">Discount</th>
             <th class="sub-head text-right" style="width: 15%; vertical-align: bottom;">Extended Price</th>
         </tr>
     </thead>
@@ -687,6 +688,13 @@ body {
                     <td class="text-center">{{ item.units|default:"EA" }}</td>
                     <td class="text-right">{{ item.quantity }}</td>
                     <td class="text-right">${{ item.unit_price|floatformat:2 }}</td>
+                    <td class="text-center">
+                        {% if item.discount and item.discount > 0 %}
+                            {{ item.discount|floatformat:"-2" }}%
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
                     <td class="text-right"><strong>${{ item.total_price|floatformat:2 }}</strong></td>
                 </tr>
                 <tr class="inv-item-row-sub">
@@ -695,6 +703,7 @@ body {
                         {% if item.description and item.description != item.part_name and item.description != item.part_ipn %}<br><span style="font-size: 7pt; color: #64748b;">{{ item.description }}</span>{% endif %}
                     </td>
                     <td class="text-center">1.0</td>
+                    <td></td>
                     <td></td>
                     <td></td>
                     <td></td>
@@ -710,6 +719,13 @@ body {
                 <td class="text-center">{{ line.part.units|default:"EA" }}</td>
                 <td class="text-right">{% decimal line.quantity %}</td>
                 <td class="text-right">{% render_currency line.price %}</td>
+                <td class="text-center">
+                    {% if line.discount and line.discount > 0 %}
+                        {{ line.discount|floatformat:"-2" }}%
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
                 <td class="text-right"><strong>{% render_currency line.total_line_price %}</strong></td>
             </tr>
             <tr class="inv-item-row-sub">
@@ -721,10 +737,11 @@ body {
                 <td></td>
                 <td></td>
                 <td></td>
+                <td></td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5" class="text-center" style="padding: 15px; color: #64748b;">
+                <td colspan="6" class="text-center" style="padding: 15px; color: #64748b;">
                     No line items in this order.
                 </td>
             </tr>
@@ -741,10 +758,18 @@ body {
                     <td class="text-center">EA</td>
                     <td class="text-right">{{ extra.quantity }}</td>
                     <td class="text-right">${{ extra.unit_price|floatformat:2 }}</td>
+                    <td class="text-center">
+                        {% if extra.discount and extra.discount > 0 %}
+                            {{ extra.discount|floatformat:"-2" }}%
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
                     <td class="text-right"><strong>${{ extra.total_price|floatformat:2 }}</strong></td>
                 </tr>
                 <tr class="inv-item-row-sub">
                     <td class="text-left">{{ extra.notes|default:"Additional service / freight charge" }}</td>
+                    <td></td>
                     <td></td>
                     <td></td>
                     <td></td>
@@ -761,10 +786,18 @@ body {
                 <td class="text-center">EA</td>
                 <td class="text-right">{% decimal line.quantity %}</td>
                 <td class="text-right">{% render_currency line.price %}</td>
+                <td class="text-center">
+                    {% if line.discount and line.discount > 0 %}
+                        {{ line.discount|floatformat:"-2" }}%
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
                 <td class="text-right"><strong>{% render_currency line.total_line_price %}</strong></td>
             </tr>
             <tr class="inv-item-row-sub">
                 <td class="text-left">{{ line.notes|default:"Additional service / freight charge" }}</td>
+                <td></td>
                 <td></td>
                 <td></td>
                 <td></td>

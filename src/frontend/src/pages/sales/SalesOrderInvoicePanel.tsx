@@ -29,24 +29,29 @@ import {
   IconPrinter,
   IconReceiptTax,
   IconRefresh,
-  IconTruckDelivery
+  IconTruckDelivery,
+  IconX
 } from '@tabler/icons-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../App';
+import { GenerateInvoiceForm } from '../../components/modals/GenerateInvoiceModal';
 
 export interface SalesOrderInvoicePanelProps {
   order: any;
-  onOpenModal: () => void;
+  onOpenModal?: () => void;
   refreshOrder?: () => void;
+  defaultOpenForm?: boolean;
 }
 
 export function SalesOrderInvoicePanel({
   order,
   onOpenModal,
-  refreshOrder
+  refreshOrder,
+  defaultOpenForm = false
 }: Readonly<SalesOrderInvoicePanelProps>) {
   const [loading, setLoading] = useState<boolean>(false);
   const [localOrder, setLocalOrder] = useState<any>(order);
+  const [showInvoiceForm, setShowInvoiceForm] = useState<boolean>(defaultOpenForm);
   const [htmlCache, setHtmlCache] = useState<Record<string, string>>({});
   const [loadingHtml, setLoadingHtml] = useState<Record<string, boolean>>({});
   const initializedOrderPk = useRef<number | null>(null);
@@ -256,16 +261,30 @@ export function SalesOrderInvoicePanel({
               {t`Refresh`}
             </Button>
             <Button
-              color='blue'
+              color={showInvoiceForm ? 'gray' : 'blue'}
+              variant={showInvoiceForm ? 'outline' : 'filled'}
               size='sm'
-              leftSection={<IconPlus size={16} />}
-              onClick={onOpenModal}
+              leftSection={showInvoiceForm ? <IconX size={16} /> : <IconPlus size={16} />}
+              onClick={() => setShowInvoiceForm((prev) => !prev)}
             >
-              {t`Generate Invoice (+)`}
+              {showInvoiceForm ? t`Close Form` : t`Generate Invoice (+)`}
             </Button>
           </Group>
         </Group>
       </Paper>
+
+      {/* Inline Invoice Creation Form */}
+      {showInvoiceForm && (
+        <GenerateInvoiceForm
+          key={`inv-form-${localOrder?.pk}-${invoicesList.length}`}
+          order={localOrder}
+          onClose={() => setShowInvoiceForm(false)}
+          onInvoiceGenerated={(_newInv) => {
+            setShowInvoiceForm(false);
+            handleRefresh();
+          }}
+        />
+      )}
 
       {/* Invoices Accordion List */}
       {invoicesList.length > 0 ? (
@@ -661,27 +680,29 @@ export function SalesOrderInvoicePanel({
           })}
         </Accordion>
       ) : (
-        /* Empty State */
-        <Card p='xl' withBorder radius='md' style={{ textAlign: 'center' }}>
-          <Stack align='center' gap='sm'>
-            <ThemeIcon size={64} radius='xl' color='blue' variant='light'>
-              <IconFileInvoice size={36} />
-            </ThemeIcon>
-            <Title order={4}>{t`No Invoices Generated Yet`}</Title>
-            <Text size='sm' c='dimmed' maw={480}>
-              {t`An invoice has not been generated for this Sales Order yet. Multiple invoices can be created for initial billing, milestones, shipping charges, or balance payments.`}
-            </Text>
-            <Button
-              mt='sm'
-              size='md'
-              color='blue'
-              leftSection={<IconPlus size={18} />}
-              onClick={onOpenModal}
-            >
-              {t`Generate First Invoice (+)`}
-            </Button>
-          </Stack>
-        </Card>
+        !showInvoiceForm && (
+          /* Empty State */
+          <Card p='xl' withBorder radius='md' style={{ textAlign: 'center' }}>
+            <Stack align='center' gap='sm'>
+              <ThemeIcon size={64} radius='xl' color='blue' variant='light'>
+                <IconFileInvoice size={36} />
+              </ThemeIcon>
+              <Title order={4}>{t`No Invoices Generated Yet`}</Title>
+              <Text size='sm' c='dimmed' maw={480}>
+                {t`An invoice has not been generated for this Sales Order yet. Multiple invoices can be created for initial billing, milestones, shipping charges, or balance payments.`}
+              </Text>
+              <Button
+                mt='sm'
+                size='md'
+                color='blue'
+                leftSection={<IconPlus size={18} />}
+                onClick={() => setShowInvoiceForm(true)}
+              >
+                {t`Generate First Invoice (+)`}
+              </Button>
+            </Stack>
+          </Card>
+        )
       )}
     </Stack>
   );

@@ -234,3 +234,13 @@ class TransferOrderAdmin(admin.ModelAdmin):
         'project_code',
         'responsible',
     ]
+
+
+@admin.register(models.DiscountTier)
+class DiscountTierAdmin(admin.ModelAdmin):
+    """Admin settings for DiscountTier."""
+
+    list_display = ('name', 'discount_percentage', 'is_active', 'description')
+    list_filter = ('is_active',)
+    search_fields = ('name', 'description')
+    ordering = ('discount_percentage',)

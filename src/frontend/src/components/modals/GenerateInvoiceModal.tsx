@@ -19,7 +19,8 @@ import {
   Text,
   TextInput,
   ThemeIcon,
-  Title
+  Title,
+  Tooltip
 } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
 import {
@@ -30,7 +31,8 @@ import {
   IconPlus,
   IconReceiptTax,
   IconTrash,
-  IconTruckDelivery
+  IconTruckDelivery,
+  IconX
 } from '@tabler/icons-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -38,6 +40,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ApiEndpoints } from '@lib/enums/ApiEndpoints';
 import { apiUrl } from '@lib/functions/Api';
 import { api } from '../../App';
+import { useDiscountTierChoices } from '../../hooks/UseDiscountTiers';
+
+export interface GenerateInvoiceFormProps {
+  order: any;
+  onClose?: () => void;
+  onInvoiceGenerated?: (result: any) => void;
+  inModal?: boolean;
+}
 
 export interface GenerateInvoiceModalProps {
   opened: boolean;
@@ -55,6 +65,7 @@ interface InvoiceLineItem {
   units?: string;
   quantity: number;
   unitPrice: number;
+  discount?: number;
   isNew?: boolean;
 }
 
@@ -64,6 +75,7 @@ interface InvoiceExtraLineItem {
   notes?: string;
   quantity: number;
   price: number;
+  discount?: number;
   isNew?: boolean;
 }
 
@@ -147,12 +159,12 @@ const parsePrice = (val: any): number => {
   return 0;
 };
 
-export function GenerateInvoiceModal({
-  opened,
-  onClose,
+export function GenerateInvoiceForm({
   order,
-  onInvoiceGenerated
-}: Readonly<GenerateInvoiceModalProps>) {
+  onClose,
+  onInvoiceGenerated,
+  inModal = false
+}: Readonly<GenerateInvoiceFormProps>) {
   const queryClient = useQueryClient();
   const [loadingData, setLoadingData] = useState<boolean>(false);
   const [generating, setGenerating] = useState<boolean>(false);
@@ -170,6 +182,29 @@ export function GenerateInvoiceModal({
     { state: string; code: string; rate: number }[]
   >(DEFAULT_STATE_TAX_RATES);
 
+  // Discount tier choices
+  const { choices: discountTierChoices } = useDiscountTierChoices();
+  const discountSelectOptions = useMemo(() => {
+    return discountTierChoices.map((c) => ({
+      value: String(Number(c.value) || 0),
+      label: c.display_name
+    }));
+  }, [discountTierChoices]);
+
+  const getDiscountOptionsForValue = useCallback(
+    (discountVal: number | string | undefined) => {
+      const valStr = String(Number(discountVal) || 0);
+      if (discountSelectOptions.some((opt) => opt.value === valStr)) {
+        return discountSelectOptions;
+      }
+      return [
+        ...discountSelectOptions,
+        { value: valStr, label: `${valStr}%` }
+      ];
+    },
+    [discountSelectOptions]
+  );
+
   // Line items state
   const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([]);
   const [extraLines, setExtraLines] = useState<InvoiceExtraLineItem[]>([]);
@@ -179,17 +214,19 @@ export function GenerateInvoiceModal({
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
   const [newLineQty, setNewLineQty] = useState<number>(1);
   const [newLinePrice, setNewLinePrice] = useState<number>(0);
+  const [newLineDiscount, setNewLineDiscount] = useState<string>('0');
   const [showAddLine, setShowAddLine] = useState<boolean>(false);
 
   // Extra line item state
   const [newExtraRef, setNewExtraRef] = useState<string>('');
   const [newExtraQty, setNewExtraQty] = useState<number>(1);
   const [newExtraPrice, setNewExtraPrice] = useState<number>(0);
+  const [newExtraDiscount, setNewExtraDiscount] = useState<string>('0');
   const [showAddExtra, setShowAddExtra] = useState<boolean>(false);
 
   // Initialize data when modal opens
   useEffect(() => {
-    if (!opened || !order?.pk) return;
+    if (!order?.pk) return;
 
     // Dynamic Invoice Number default for multiple invoices
     const existingInvoices = Array.isArray(order.metadata?.invoices)
@@ -270,7 +307,8 @@ export function GenerateInvoiceModal({
               l.part_detail?.pricing_min ??
               l.part_detail?.cost ??
               0
-          )
+          ),
+          discount: Number(l.discount) || 0
         }));
 
         // Merge any additional items previously saved in invoice metadata for this order
@@ -287,6 +325,7 @@ export function GenerateInvoiceModal({
               units: it.units || 'pcs',
               quantity: Number(it.quantity) || 1,
               unitPrice: parsePrice(it.unit_price),
+              discount: Number(it.discount) || 0,
               isNew: true
             }));
           mappedLines = [...mappedLines, ...extraSavedItems];
@@ -304,7 +343,8 @@ export function GenerateInvoiceModal({
             reference: el.reference || el.description || 'Additional Charge',
             notes: el.notes || '',
             quantity: Number(el.quantity) || 1,
-            price: parsePrice(el.price ?? el.total_price)
+            price: parsePrice(el.price ?? el.total_price),
+            discount: Number(el.discount) || 0
           }));
 
           // Load any saved extra charges from metadata if not present in DB
@@ -315,6 +355,7 @@ export function GenerateInvoiceModal({
               notes: ex.notes || '',
               quantity: Number(ex.quantity) || 1,
               price: parsePrice(ex.unit_price ?? ex.price ?? ex.total_price),
+              discount: Number(ex.discount) || 0,
               isNew: true
             }));
           }
@@ -402,7 +443,7 @@ export function GenerateInvoiceModal({
       .finally(() => {
         setLoadingData(false);
       });
-  }, [opened, order?.pk]);
+  }, [order?.pk]);
 
   // Handle Tax Rate selection change
   const handleTaxSelection = useCallback(
@@ -465,6 +506,7 @@ export function GenerateInvoiceModal({
       units: part.units || 'pcs',
       quantity: newLineQty,
       unitPrice: newLinePrice,
+      discount: Number(newLineDiscount) || 0,
       isNew: true
     };
 
@@ -472,8 +514,9 @@ export function GenerateInvoiceModal({
     setSelectedPartId(null);
     setNewLineQty(1);
     setNewLinePrice(0);
+    setNewLineDiscount('0');
     setShowAddLine(false);
-  }, [selectedPartId, partsList, newLineQty, newLinePrice]);
+  }, [selectedPartId, partsList, newLineQty, newLinePrice, newLineDiscount]);
 
   // Add extra line item
   const handleAddExtraLineItem = useCallback(() => {
@@ -483,6 +526,7 @@ export function GenerateInvoiceModal({
       reference: newExtraRef.trim(),
       quantity: newExtraQty,
       price: newExtraPrice,
+      discount: Number(newExtraDiscount) || 0,
       isNew: true
     };
 
@@ -490,8 +534,9 @@ export function GenerateInvoiceModal({
     setNewExtraRef('');
     setNewExtraQty(1);
     setNewExtraPrice(0);
+    setNewExtraDiscount('0');
     setShowAddExtra(false);
-  }, [newExtraRef, newExtraQty, newExtraPrice]);
+  }, [newExtraRef, newExtraQty, newExtraPrice, newExtraDiscount]);
 
   // Remove line item
   const handleRemoveLine = useCallback((index: number) => {
@@ -506,11 +551,19 @@ export function GenerateInvoiceModal({
   // Calculate live totals
   const subtotal: number = useMemo(() => {
     const linesTotal = lineItems.reduce(
-      (acc, item) => acc + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0),
+      (acc, item) =>
+        acc +
+        (Number(item.quantity) || 0) *
+          (Number(item.unitPrice) || 0) *
+          (1 - (Number(item.discount) || 0) / 100),
       0
     );
     const extrasTotal = extraLines.reduce(
-      (acc, item) => acc + (Number(item.quantity) || 0) * (Number(item.price) || 0),
+      (acc, item) =>
+        acc +
+        (Number(item.quantity) || 0) *
+          (Number(item.price) || 0) *
+          (1 - (Number(item.discount) || 0) / 100),
       0
     );
     return Number((linesTotal + extrasTotal).toFixed(2));
@@ -539,31 +592,41 @@ export function GenerateInvoiceModal({
         tax_amount: taxAmount,
         subtotal: subtotal,
         total_amount_due: totalAmountDue,
-        items: lineItems.map((item, idx) => ({
-          line_number: idx + 1,
-          id: item.id,
-          part_id: item.partId,
-          part_name: item.partName,
-          part_ipn: item.partIPN || '',
-          description: item.partDescription || item.partName || '',
-          units: item.units || 'pcs',
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          total_price: Number(((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2)),
-          is_new: Boolean(item.isNew)
-        })),
-        extra_items: extraLines.map((extra, idx) => ({
-          line_number: idx + 1,
-          id: extra.id,
-          description: extra.reference || 'Additional Charge',
-          reference: extra.reference || 'Additional Charge',
-          notes: extra.notes || '',
-          quantity: extra.quantity,
-          unit_price: extra.price,
-          price: extra.price,
-          total_price: Number(((extra.quantity || 0) * (extra.price || 0)).toFixed(2)),
-          is_new: Boolean(extra.isNew)
-        }))
+        items: lineItems.map((item, idx) => {
+          const disc = Number(item.discount) || 0;
+          const extPrice = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * (1 - disc / 100);
+          return {
+            line_number: idx + 1,
+            id: item.id,
+            part_id: item.partId,
+            part_name: item.partName,
+            part_ipn: item.partIPN || '',
+            description: item.partDescription || item.partName || '',
+            units: item.units || 'pcs',
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            discount: disc,
+            total_price: Number(extPrice.toFixed(2)),
+            is_new: Boolean(item.isNew)
+          };
+        }),
+        extra_items: extraLines.map((extra, idx) => {
+          const disc = Number(extra.discount) || 0;
+          const extPrice = (Number(extra.quantity) || 0) * (Number(extra.price) || 0) * (1 - disc / 100);
+          return {
+            line_number: idx + 1,
+            id: extra.id,
+            description: extra.reference || 'Additional Charge',
+            reference: extra.reference || 'Additional Charge',
+            notes: extra.notes || '',
+            quantity: extra.quantity,
+            unit_price: extra.price,
+            price: extra.price,
+            discount: disc,
+            total_price: Number(extPrice.toFixed(2)),
+            is_new: Boolean(extra.isNew)
+          };
+        })
       };
 
       const res = await api.post(
@@ -590,7 +653,7 @@ export function GenerateInvoiceModal({
         onInvoiceGenerated(res.data);
       }
 
-      onClose();
+      onClose?.();
     } catch (err: any) {
       console.error('Invoice generation failed:', err);
       showNotification({
@@ -621,24 +684,7 @@ export function GenerateInvoiceModal({
     queryClient
   ]);
 
-  return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title={
-        <Group gap='xs'>
-          <ThemeIcon size='md' radius='md' color='blue' variant='light'>
-            <IconFileInvoice size={20} />
-          </ThemeIcon>
-          <Title order={4}>
-            {t`Generate Invoice`} &mdash; {order?.reference}
-          </Title>
-        </Group>
-      }
-      size='xl'
-      padding='lg'
-    >
-      {loadingData ? (
+  const formBody = loadingData ? (
         <Stack align='center' py='xl'>
           <Loader size='md' />
           <Text size='sm' c='dimmed'>{t`Loading order details and line items...`}</Text>
@@ -763,7 +809,7 @@ export function GenerateInvoiceModal({
             {showAddLine && (
               <Card p='xs' mb='sm' withBorder bg='blue.0'>
                 <Grid gap='xs' align='flex-end'>
-                  <Grid.Col span={{ base: 12, sm: 5 }}>
+                  <Grid.Col span={{ base: 12, sm: 4 }}>
                     <Select
                       size='xs'
                       label={t`Select Part`}
@@ -799,7 +845,16 @@ export function GenerateInvoiceModal({
                       required
                     />
                   </Grid.Col>
-                  <Grid.Col span={{ base: 12, sm: 3 }}>
+                  <Grid.Col span={{ base: 6, sm: 2 }}>
+                    <Select
+                      size='xs'
+                      label={t`Discount Tier`}
+                      data={discountSelectOptions}
+                      value={String(Number(newLineDiscount) || 0)}
+                      onChange={(v) => setNewLineDiscount(v || '0')}
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, sm: 2 }}>
                     <Group gap='xs'>
                       <Button
                         size='xs'
@@ -826,17 +881,18 @@ export function GenerateInvoiceModal({
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>{t`Item / Part`}</Table.Th>
-                  <Table.Th style={{ width: 80, textAlign: 'center' }}>{t`UOM`}</Table.Th>
-                  <Table.Th style={{ width: 110, textAlign: 'right' }}>{t`Qty`}</Table.Th>
-                  <Table.Th style={{ width: 130, textAlign: 'right' }}>{t`Unit Price`}</Table.Th>
-                  <Table.Th style={{ width: 140, textAlign: 'right' }}>{t`Extended Price`}</Table.Th>
-                  <Table.Th style={{ width: 50, textAlign: 'center' }}></Table.Th>
+                  <Table.Th style={{ width: 70, textAlign: 'center' }}>{t`UOM`}</Table.Th>
+                  <Table.Th style={{ width: 90, textAlign: 'right' }}>{t`Qty`}</Table.Th>
+                  <Table.Th style={{ width: 110, textAlign: 'right' }}>{t`Unit Price`}</Table.Th>
+                  <Table.Th style={{ width: 140, textAlign: 'left' }}>{t`Discount Tier`}</Table.Th>
+                  <Table.Th style={{ width: 120, textAlign: 'right' }}>{t`Extended Price`}</Table.Th>
+                  <Table.Th style={{ width: 40, textAlign: 'center' }}></Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {lineItems.length === 0 ? (
                   <Table.Tr>
-                    <Table.Td colSpan={6} style={{ textAlign: 'center', color: '#888' }}>
+                    <Table.Td colSpan={7} style={{ textAlign: 'center', color: '#888' }}>
                       {t`No line items in this invoice`}
                     </Table.Td>
                   </Table.Tr>
@@ -887,8 +943,24 @@ export function GenerateInvoiceModal({
                           prefix='$'
                         />
                       </Table.Td>
+                      <Table.Td style={{ textAlign: 'left' }}>
+                        <Select
+                          size='xs'
+                          data={getDiscountOptionsForValue(item.discount)}
+                          value={String(Number(item.discount) || 0)}
+                          onChange={(val) => {
+                            const updated = [...lineItems];
+                            updated[idx].discount = Number(val) || 0;
+                            setLineItems(updated);
+                          }}
+                        />
+                      </Table.Td>
                       <Table.Td style={{ textAlign: 'right', fontWeight: 600 }}>
-                        ${((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2)}
+                        ${(
+                          (item.quantity || 0) *
+                          (item.unitPrice || 0) *
+                          (1 - (item.discount || 0) / 100)
+                        ).toFixed(2)}
                       </Table.Td>
                       <Table.Td style={{ textAlign: 'center' }}>
                         <ActionIcon
@@ -931,7 +1003,7 @@ export function GenerateInvoiceModal({
             {showAddExtra && (
               <Card p='xs' mb='sm' withBorder bg='orange.0'>
                 <Grid gap='xs' align='flex-end'>
-                  <Grid.Col span={{ base: 12, sm: 5 }}>
+                  <Grid.Col span={{ base: 12, sm: 4 }}>
                     <TextInput
                       size='xs'
                       label={t`Charge Description`}
@@ -962,7 +1034,16 @@ export function GenerateInvoiceModal({
                       required
                     />
                   </Grid.Col>
-                  <Grid.Col span={{ base: 12, sm: 3 }}>
+                  <Grid.Col span={{ base: 6, sm: 2 }}>
+                    <Select
+                      size='xs'
+                      label={t`Discount Tier`}
+                      data={discountSelectOptions}
+                      value={String(Number(newExtraDiscount) || 0)}
+                      onChange={(v) => setNewExtraDiscount(v || '0')}
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, sm: 2 }}>
                     <Group gap='xs'>
                       <Button
                         size='xs'
@@ -989,16 +1070,17 @@ export function GenerateInvoiceModal({
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>{t`Description`}</Table.Th>
-                  <Table.Th style={{ width: 110, textAlign: 'right' }}>{t`Qty`}</Table.Th>
-                  <Table.Th style={{ width: 130, textAlign: 'right' }}>{t`Price`}</Table.Th>
-                  <Table.Th style={{ width: 140, textAlign: 'right' }}>{t`Total`}</Table.Th>
-                  <Table.Th style={{ width: 50, textAlign: 'center' }}></Table.Th>
+                  <Table.Th style={{ width: 90, textAlign: 'right' }}>{t`Qty`}</Table.Th>
+                  <Table.Th style={{ width: 110, textAlign: 'right' }}>{t`Price`}</Table.Th>
+                  <Table.Th style={{ width: 140, textAlign: 'left' }}>{t`Discount Tier`}</Table.Th>
+                  <Table.Th style={{ width: 120, textAlign: 'right' }}>{t`Total`}</Table.Th>
+                  <Table.Th style={{ width: 40, textAlign: 'center' }}></Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {extraLines.length === 0 ? (
                   <Table.Tr>
-                    <Table.Td colSpan={5} style={{ textAlign: 'center', color: '#888' }}>
+                    <Table.Td colSpan={6} style={{ textAlign: 'center', color: '#888' }}>
                       {t`No extra line items in this invoice`}
                     </Table.Td>
                   </Table.Tr>
@@ -1042,8 +1124,24 @@ export function GenerateInvoiceModal({
                           prefix='$'
                         />
                       </Table.Td>
+                      <Table.Td style={{ textAlign: 'left' }}>
+                        <Select
+                          size='xs'
+                          data={getDiscountOptionsForValue(extra.discount)}
+                          value={String(Number(extra.discount) || 0)}
+                          onChange={(val) => {
+                            const updated = [...extraLines];
+                            updated[idx].discount = Number(val) || 0;
+                            setExtraLines(updated);
+                          }}
+                        />
+                      </Table.Td>
                       <Table.Td style={{ textAlign: 'right', fontWeight: 600 }}>
-                        ${((extra.quantity || 0) * (extra.price || 0)).toFixed(2)}
+                        ${(
+                          (extra.quantity || 0) *
+                          (extra.price || 0) *
+                          (1 - (extra.discount || 0) / 100)
+                        ).toFixed(2)}
                       </Table.Td>
                       <Table.Td style={{ textAlign: 'center' }}>
                         <ActionIcon
@@ -1099,12 +1197,15 @@ export function GenerateInvoiceModal({
               </Stack>
             </Group>
           </Paper>
-
           {/* Bottom Action Footer */}
           <Group justify='space-between' pt='sm'>
-            <Button variant='default' onClick={onClose}>
-              {t`Cancel`}
-            </Button>
+            {onClose ? (
+              <Button variant='default' onClick={onClose}>
+                {t`Cancel`}
+              </Button>
+            ) : (
+              <div />
+            )}
             <Button
               size='md'
               color='blue'
@@ -1116,7 +1217,85 @@ export function GenerateInvoiceModal({
             </Button>
           </Group>
         </Stack>
-      )}
+      );
+
+  if (inModal) {
+    return formBody;
+  }
+
+  return (
+    <Paper p='md' withBorder radius='md' shadow='xs' bg='white'>
+      <Group justify='space-between' align='center' mb='md'>
+        <Group gap='xs'>
+          <ThemeIcon size='lg' radius='md' color='blue' variant='light'>
+            <IconFileInvoice size={22} />
+          </ThemeIcon>
+          <div>
+            <Group gap='xs'>
+              <Title order={4}>
+                {t`Generate Invoice`} &mdash; {order?.reference}
+              </Title>
+              <Badge size='sm' color='blue' variant='light'>
+                {t`New Draft`}
+              </Badge>
+            </Group>
+            <Text size='xs' c='dimmed'>
+              {t`Customize invoice lines, shipping, and tax rates before generating.`}
+            </Text>
+          </div>
+        </Group>
+        {onClose && (
+          <Tooltip label={t`Close invoice form`}>
+            <ActionIcon
+              variant='subtle'
+              color='gray'
+              size='lg'
+              radius='md'
+              onClick={onClose}
+              aria-label={t`Close invoice form`}
+            >
+              <IconX size={20} />
+            </ActionIcon>
+          </Tooltip>
+        )}
+      </Group>
+      <Divider mb='md' />
+      {formBody}
+    </Paper>
+  );
+}
+
+export function GenerateInvoiceModal({
+  opened,
+  onClose,
+  order,
+  onInvoiceGenerated
+}: Readonly<GenerateInvoiceModalProps>) {
+  if (!opened) return null;
+
+  return (
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      title={
+        <Group gap='xs'>
+          <ThemeIcon size='md' radius='md' color='blue' variant='light'>
+            <IconFileInvoice size={20} />
+          </ThemeIcon>
+          <Title order={4}>
+            {t`Generate Invoice`} &mdash; {order?.reference}
+          </Title>
+        </Group>
+      }
+      size='xl'
+      padding='lg'
+    >
+      <GenerateInvoiceForm
+        order={order}
+        onClose={onClose}
+        onInvoiceGenerated={onInvoiceGenerated}
+        inModal
+      />
     </Modal>
   );
 }

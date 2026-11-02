@@ -82,6 +82,67 @@ from stock.status_codes import StockHistoryCode, StockStatus
 logger = structlog.get_logger('inventree')
 
 
+class DiscountTier(models.Model):
+    """Model representing configurable discount tiers for orders.
+
+    Counter staff may only select from active discount tiers,
+    preventing arbitrary discount percentages.
+
+    Attributes:
+        name: Unique label for the discount tier (e.g. 'Tier 1', 'Loyalty 10%')
+        description: Optional notes describing the tier eligibility
+        discount_percentage: Percentage discount (0-100)
+        is_active: Whether this tier is currently active and selectable
+    """
+
+    class Meta:
+        """Class options for DiscountTier model."""
+
+        db_table = 'order_discount_tier'
+        verbose_name = _('Discount Tier')
+        verbose_name_plural = _('Discount Tiers')
+        ordering = ['discount_percentage']
+
+    @staticmethod
+    def get_api_url():
+        """Return the API URL for this model."""
+        return reverse('api-discount-tier-list')
+
+    def __str__(self):
+        """String representation of a discount tier."""
+        return f'{self.name} ({self.discount_percentage}%)'
+
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name=_('Name'),
+        help_text=_('Unique name for this discount tier (e.g. "Tier 1", "Loyalty")'),
+    )
+
+    description = models.CharField(
+        max_length=250,
+        blank=True,
+        default='',
+        verbose_name=_('Description'),
+        help_text=_('Optional description or eligibility criteria for this tier'),
+    )
+
+    discount_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name=_('Discount (%)'),
+        help_text=_('Permitted discount percentage (0-100)'),
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Active'),
+        help_text=_('Only active tiers can be selected by counter staff'),
+    )
+
+
 class TotalPriceMixin(models.Model):
     """Mixin which provides 'total_price' field for an order."""
 

@@ -420,3 +420,24 @@ export function selectionEntryFields(): ApiFormFieldSet {
     active: {}
   };
 }
+
+export function discountTierFields(): ApiFormFieldSet {
+  return {
+    name: {
+      label: t`Name`,
+      description: t`Name of the discount tier (e.g. Tier 1, Loyalty)`
+    },
+    description: {
+      label: t`Description`,
+      description: t`Optional description for this tier`
+    },
+    discount_percentage: {
+      label: t`Discount (%)`,
+      description: t`Percentage discount permitted for this tier (0-100)`
+    },
+    is_active: {
+      label: t`Active`,
+      description: t`Only active tiers are selectable by counter staff`
+    }
+  };
+}

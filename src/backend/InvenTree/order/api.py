@@ -1458,11 +1458,13 @@ class SalesOrderGenerateInvoice(SalesOrderContextMixin, GenericAPIView):
                         line_num = str(item.get('line_number') or (order.lines.count() + 1))
                         desc = item.get('description', '') or part_obj.description or part_obj.name
 
+                        disc_val = Decimal(str(item.get('discount', 0)))
                         new_line = models.SalesOrderLineItem(
                             order=order,
                             part=part_obj,
                             quantity=qty,
                             sale_price=sale_price,
+                            discount=disc_val,
                             line=line_num,
                             reference=desc[:100],
                             notes=item.get('notes', '')
@@ -1505,6 +1507,12 @@ class SalesOrderGenerateInvoice(SalesOrderContextMixin, GenericAPIView):
                         existing_line.quantity = new_qty
                         has_changed = True
 
+                    if item.get('discount') is not None:
+                        new_disc = Decimal(str(item.get('discount', 0)))
+                        if existing_line.discount != new_disc:
+                            existing_line.discount = new_disc
+                            has_changed = True
+
                     if has_changed:
                         try:
                             existing_line.save()
@@ -1517,6 +1525,7 @@ class SalesOrderGenerateInvoice(SalesOrderContextMixin, GenericAPIView):
         existing_extras = list(order.extra_lines.all())
         existing_extra_refs = {ex.description.strip().lower() for ex in existing_extras if ex.description}
         existing_extra_refs.update({ex.reference.strip().lower() for ex in existing_extras if ex.reference})
+        existing_extra_map = {ex.pk: ex for ex in existing_extras}
 
         for extra in extra_items:
             is_new = bool(
@@ -1524,17 +1533,19 @@ class SalesOrderGenerateInvoice(SalesOrderContextMixin, GenericAPIView):
                 or extra.get('isNew')
                 or (extra.get('id') is not None and isinstance(extra.get('id'), (int, float)) and extra.get('id') < 0)
             )
+            extra_id = extra.get('id')
             ref = (extra.get('reference') or extra.get('description') or '').strip()
             if not ref:
                 continue
 
-            if is_new or ref.lower() not in existing_extra_refs:
+            if (is_new or (ref.lower() not in existing_extra_refs and not extra_id)) and not (extra_id and extra_id in existing_extra_map):
                 try:
                     qty = Decimal(str(extra.get('quantity', 1)))
                     price_val = Decimal(str(extra.get('unit_price', extra.get('price', 0))))
                     extra_price = Money(price_val, order_currency)
                     line_num = str(extra.get('line_number') or (order.extra_lines.count() + 1))
 
+                    extra_disc = Decimal(str(extra.get('discount', 0)))
                     new_extra = models.SalesOrderExtraLine(
                         order=order,
                         description=ref[:250],
@@ -1542,6 +1553,7 @@ class SalesOrderGenerateInvoice(SalesOrderContextMixin, GenericAPIView):
                         notes=extra.get('notes', ''),
                         quantity=qty,
                         price=extra_price,
+                        discount=extra_disc,
                         line=line_num
                     )
 
@@ -1561,6 +1573,37 @@ class SalesOrderGenerateInvoice(SalesOrderContextMixin, GenericAPIView):
                     extra['is_new'] = False
                 except Exception as ex:
                     logger.warning(f"Error auto-saving SalesOrderExtraLine: {ex}")
+            elif extra_id and extra_id in existing_extra_map:
+                try:
+                    existing_extra = existing_extra_map[extra_id]
+                    has_changed = False
+                    new_price_val = Decimal(str(extra.get('unit_price', extra.get('price', 0))))
+                    new_qty = Decimal(str(extra.get('quantity', 1)))
+
+                    if (existing_extra.price is None or existing_extra.price.amount == 0) and new_price_val > 0:
+                        existing_extra.price = Money(new_price_val, order_currency)
+                        has_changed = True
+                    elif new_price_val > 0 and existing_extra.price and abs(existing_extra.price.amount - new_price_val) > Decimal('0.001'):
+                        existing_extra.price = Money(new_price_val, order_currency)
+                        has_changed = True
+
+                    if existing_extra.quantity != new_qty and new_qty > 0:
+                        existing_extra.quantity = new_qty
+                        has_changed = True
+
+                    if extra.get('discount') is not None:
+                        new_disc = Decimal(str(extra.get('discount', 0)))
+                        if existing_extra.discount != new_disc:
+                            existing_extra.discount = new_disc
+                            has_changed = True
+
+                    if has_changed:
+                        try:
+                            existing_extra.save()
+                        except Exception:
+                            models.Model.save(existing_extra)
+                except Exception as ex:
+                    logger.warning(f"Error updating existing SalesOrderExtraLine: {ex}")
 
         # Recalculate order total price
         try:
@@ -3180,7 +3223,59 @@ class OrderCalendarExport(ICalFeed):
         return construct_absolute_url(item.get_absolute_url())
 
 
+class DiscountTierList(DataExportViewMixin, ListCreateAPI):
+    """List and create view for discount tiers.
+
+    Staff/admins see all tiers; non-staff counter users see active tiers by default.
+    Staff can create new tiers; non-staff have read-only access.
+    """
+
+    queryset = models.DiscountTier.objects.all()
+    serializer_class = serializers.DiscountTierSerializer
+    permission_classes = [InvenTree.permissions.IsStaffOrReadOnlyScope]
+    filter_backends = SEARCH_ORDER_FILTER
+
+    ordering_fields = ['name', 'discount_percentage', 'is_active']
+    search_fields = ['name', 'description']
+    filterset_fields = ['is_active']
+
+    def get_queryset(self):
+        """Filter queryset: counter staff only receive active tiers unless explicitly filtered."""
+        qs = super().get_queryset()
+        user = getattr(self.request, 'user', None)
+        if user and not user.is_staff and not user.is_superuser:
+            qs = qs.filter(is_active=True)
+        return qs
+
+
+class DiscountTierDetail(RetrieveUpdateDestroyAPI):
+    """Detail view for retrieving, updating, and deleting a discount tier.
+
+    Staff/admins have write permissions; non-staff have read-only access.
+    """
+
+    queryset = models.DiscountTier.objects.all()
+    serializer_class = serializers.DiscountTierSerializer
+    permission_classes = [InvenTree.permissions.IsStaffOrReadOnlyScope]
+
+
 order_api_urls = [
+    # Discount Tiers
+    path(
+        'discount-tier/',
+        include([
+            path(
+                '<int:pk>/',
+                DiscountTierDetail.as_view(),
+                name='api-discount-tier-detail',
+            ),
+            path(
+                '',
+                DiscountTierList.as_view(),
+                name='api-discount-tier-list',
+            ),
+        ]),
+    ),
     # Purchase Order, Line Item, and Extra Line API endpoints via ViewSet router
     path('', include(order_router.urls)),
     # Purchase order status code information (requires custom kwargs)

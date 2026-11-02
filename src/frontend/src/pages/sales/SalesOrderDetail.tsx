@@ -51,7 +51,6 @@ import ExtraLineItemTable from '../../tables/general/ExtraLineItemTable';
 import SalesOrderAllocationTable from '../../tables/sales/SalesOrderAllocationTable';
 import SalesOrderLineItemTable from '../../tables/sales/SalesOrderLineItemTable';
 import SalesOrderShipmentTable from '../../tables/sales/SalesOrderShipmentTable';
-import { GenerateInvoiceModal } from '../../components/modals/GenerateInvoiceModal';
 import { SalesOrderInvoicePanel } from './SalesOrderInvoicePanel';
 import { SalesOrderDetailsPanel } from './SalesOrderDetailsPanel';
 
@@ -64,8 +63,6 @@ export default function SalesOrderDetail() {
   const user = useUserState();
 
   const globalSettings = useGlobalSettingsState();
-
-  const [invoiceModalOpened, setInvoiceModalOpened] = useState<boolean>(false);
 
   const {
     instance: order,
@@ -227,13 +224,9 @@ export default function SalesOrderDetail() {
         name: 'invoices',
         label: t`Generate Invoice (+)`,
         icon: <IconFileInvoice />,
-        onClick: () => {
-          setInvoiceModalOpened(true);
-        },
         content: order?.pk ? (
           <SalesOrderInvoicePanel
             order={order}
-            onOpenModal={() => setInvoiceModalOpened(true)}
             refreshOrder={refreshInstance}
           />
         ) : (
@@ -456,12 +449,6 @@ export default function SalesOrderDetail() {
       {completeOrder.modal}
       {editSalesOrder.modal}
       {duplicateSalesOrder.modal}
-      <GenerateInvoiceModal
-        opened={invoiceModalOpened}
-        onClose={() => setInvoiceModalOpened(false)}
-        order={order}
-        onInvoiceGenerated={refreshInstance}
-      />
       <InstanceDetail
         query={instanceQuery}
         requiredRole={UserRoles.sales_order}

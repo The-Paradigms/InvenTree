@@ -57,12 +57,24 @@ function ChoiceFieldComponent({
   );
 
   const choiceValue = useMemo(() => {
-    if (!value) {
+    if (value === null || value === undefined || value === '') {
       return '';
-    } else {
-      return value.toString();
     }
-  }, [value]);
+    const strVal = value.toString();
+    const exactMatch = choices.find((c: any) => c.value === strVal);
+    if (exactMatch) {
+      return exactMatch.value;
+    }
+    // Check for numeric equivalence (e.g. 5 vs 5.00 vs 5.0, or 0.0 vs 0)
+    const numVal = Number(value);
+    if (!isNaN(numVal)) {
+      const numMatch = choices.find((c: any) => Number(c.value) === numVal);
+      if (numMatch) {
+        return numMatch.value;
+      }
+    }
+    return strVal;
+  }, [value, choices]);
 
   const onDropdownOpen = useCallback(() => inputRef?.current?.select(), []);
 

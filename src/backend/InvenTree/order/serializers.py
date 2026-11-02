@@ -64,6 +64,23 @@ from stock.status_codes import StockStatus
 from users.serializers import OwnerSerializer, UserSerializer
 
 
+@register_importer()
+class DiscountTierSerializer(DataImportExportSerializerMixin, InvenTreeModelSerializer):
+    """Serializer for the DiscountTier model."""
+
+    class Meta:
+        """Meta options for DiscountTierSerializer."""
+
+        model = order.models.DiscountTier
+        fields = [
+            'pk',
+            'name',
+            'description',
+            'discount_percentage',
+            'is_active',
+        ]
+
+
 class TotalPriceMixin(serializers.Serializer):
     """Serializer mixin which provides total price fields."""
 

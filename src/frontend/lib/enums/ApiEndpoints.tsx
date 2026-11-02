@@ -276,6 +276,9 @@ export enum ApiEndpoints {
   // US States Sales Tax
   us_states_sales_tax_list = 'us-states-sales-tax/',
 
+  // Discount Tiers
+  discount_tier_list = 'order/discount-tier/',
+
   // Internal system things
   system_internal_trace_end = 'system-internal/observability/end'
 }
